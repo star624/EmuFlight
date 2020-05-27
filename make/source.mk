@@ -237,6 +237,7 @@ SPEED_OPTIMISED_SRC := $(SPEED_OPTIMISED_SRC) \
             sensors/boardalignment.c \
             sensors/gyro.c \
             sensors/gyroanalyse.c \
+						common/dynlpf.c \
             $(CMSIS_SRC) \
             $(DEVICE_STDPERIPH_SRC) \
             common/kalman.c \

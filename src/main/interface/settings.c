@@ -503,6 +503,15 @@ const clivalue_t valueTable[] = {
     { "imuf_w",                     VAR_UINT16 | MASTER_VALUE, .config.minmax = { 3, 512   }, PG_GYRO_CONFIG, offsetof(gyroConfig_t, imuf_w) },
     { "imuf_sharpness",             VAR_UINT16 | MASTER_VALUE, .config.minmax = { 1, 16000 }, PG_GYRO_CONFIG, offsetof(gyroConfig_t, imuf_sharpness) },
 #endif
+    { "dynlpf_fmin",                VAR_UINT16 | MASTER_VALUE, .config.minmax = { 0, 1000 },   PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_fmin) },
+    { "dynlpf_fmax",                VAR_UINT16 | MASTER_VALUE, .config.minmax = { 0, 1000 },   PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_fmax) },
+    { "dynlpf_gain",                VAR_UINT16 | MASTER_VALUE, .config.minmax = { 0,  200 },   PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_gain) },
+    { "dynlpf_fc_fc",               VAR_UINT16 | MASTER_VALUE, .config.minmax = { 0,   50 },   PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_fc_fc) },
+    { "dynlpf_center_threshold",    VAR_UINT16 | MASTER_VALUE, .config.minmax = { 0,  100 },    PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_center_threshold) },
+    { "dynlpf_throttle_gain",       VAR_UINT16 | MASTER_VALUE, .config.minmax = { 0,  200 },    PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_throttle_gain) },
+    { "dynlpf_enable",              VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON },    PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_enable) },
+    { "dynlpf_type",                VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON },    PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_type) },
+    { "dynlpf_filter_type",         VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON },    PG_GYRO_CONFIG, offsetof(gyroConfig_t, dynlpf_type) },
 
 #ifdef USE_GYRO_OVERFLOW_CHECK
     { "gyro_overflow_detect",       VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_GYRO_OVERFLOW_CHECK }, PG_GYRO_CONFIG, offsetof(gyroConfig_t, checkOverflow) },

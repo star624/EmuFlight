@@ -124,6 +124,15 @@ typedef struct gyroConfig_s {
     uint16_t imuf_yaw_q;
     uint16_t imuf_w;
     uint16_t imuf_sharpness;
+    uint16_t dynlpf_fmin;
+    uint16_t dynlpf_fmax;
+    uint16_t dynlpf_gain;
+    uint16_t dynlpf_fc_fc;
+    uint16_t dynlpf_center_threshold;
+    uint16_t dynlpf_throttle_gain;
+    uint8_t  dynlpf_enable;
+    uint8_t  dynlpf_type;
+    uint8_t  dynlpf_filter_type;
 } gyroConfig_t;
 
 PG_DECLARE(gyroConfig_t, gyroConfig);

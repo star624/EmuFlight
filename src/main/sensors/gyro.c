@@ -101,6 +101,7 @@
 #ifndef USE_GYRO_IMUF9001
 #include "common/kalman.h"
 #endif
+#include "common/dynlpf.h"
 
 #if ((FLASH_SIZE > 128) && (defined(USE_GYRO_SPI_ICM20601) || defined(USE_GYRO_SPI_ICM20689) || defined(USE_GYRO_SPI_MPU6500)))
 #define USE_GYRO_SLEW_LIMITER
@@ -255,6 +256,15 @@ PG_RESET_TEMPLATE(gyroConfig_t, gyroConfig,
    	.imuf_acc_lpf_cutoff_hz = IMUF_DEFAULT_ACC_LPF_HZ,
     .imuf_sharpness = 2500,
     .gyro_offset_yaw = 0,
+    .dynlpf_fmin = DEFAULT_DYNLPF_FMIN,
+    .dynlpf_fmax = DEFAULT_DYNLPF_FMAX,
+    .dynlpf_gain = DEFAULT_DYNLPF_GAIN,
+    .dynlpf_fc_fc = DEFAULT_DYNLPF_FC_FC,
+    .dynlpf_center_threshold = DEFAULT_DYNLPF_CENTER_THRESHOLD,
+    .dynlpf_throttle_gain = DEFAULT_DYNLPF_THROTTLE_GAIN,
+    .dynlpf_enable = DEFAULT_DYNLPF_ENABLE,
+    .dynlpf_type = DEFAULT_DYNLPF_TYPE,
+    .dynlpf_filter_type = DEFAULT_DYNLPF_FILTER_TYPE,
 );
 #else //USE_GYRO_IMUF9001
 PG_RESET_TEMPLATE(gyroConfig_t, gyroConfig,
@@ -290,6 +300,15 @@ PG_RESET_TEMPLATE(gyroConfig_t, gyroConfig,
     .yaw_spin_threshold = 1950,
     .dyn_notch_q_factor = 250,
     .dyn_notch_min_hz = 150,
+    .dynlpf_fmin = DEFAULT_DYNLPF_FMIN,
+    .dynlpf_fmax = DEFAULT_DYNLPF_FMAX,
+    .dynlpf_gain = DEFAULT_DYNLPF_GAIN,
+    .dynlpf_fc_fc = DEFAULT_DYNLPF_FC_FC,
+    .dynlpf_center_threshold = DEFAULT_DYNLPF_CENTER_THRESHOLD,
+    .dynlpf_throttle_gain = DEFAULT_DYNLPF_THROTTLE_GAIN,
+    .dynlpf_enable = DEFAULT_DYNLPF_ENABLE,
+    .dynlpf_type = DEFAULT_DYNLPF_TYPE,
+    .dynlpf_filter_type = DEFAULT_DYNLPF_FILTER_TYPE,
 );
 #endif //USE_GYRO_IMUF9001
 
@@ -869,6 +888,7 @@ static void gyroInitSensorFilters(gyroSensor_t *gyroSensor)
 #ifndef USE_GYRO_IMUF9001
     kalman_init();
 #endif //USE_GYRO_IMUF9001
+    init_dynLpf();
 
     gyroInitLowpassFilterLpf(
       gyroSensor,
