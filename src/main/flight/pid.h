@@ -30,14 +30,14 @@
 #define PID_MIXER_SCALING           1000.0f
 #define PID_SERVO_MIXER_SCALING     0.7f
 #define PIDSUM_LIMIT                500
-#define PIDSUM_LIMIT_YAW            400
+#define PIDSUM_LIMIT_YAW            500
 #define PIDSUM_LIMIT_MIN            100
 #define PIDSUM_LIMIT_MAX            1000
 #define KD_RING_BUFFER_SIZE 10
 
 // Scaling factors for Pids for better tunable range in configurator for betaflight pid controller. The scaling is based on legacy pid controller or previous float
 #define PTERM_SCALE 0.032029f
-#define ITERM_SCALE 0.244381f
+#define ITERM_SCALE 0.488762f
 #define DTERM_SCALE 0.000529f
 
 // This value gives the same "feel" as the previous Kd default of 26 (26 * DTERM_SCALE)

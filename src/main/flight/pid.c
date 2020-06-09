@@ -87,15 +87,15 @@ PG_REGISTER_WITH_RESET_TEMPLATE(pidConfig_t, pidConfig, PG_PID_CONFIG, 2);
 #endif
 
 #ifndef DEFAULT_PIDS_ROLL
-#define DEFAULT_PIDS_ROLL {50, 70, 28, 0}
+#define DEFAULT_PIDS_ROLL {54, 70, 56, 0}
 #endif //DEFAULT_PIDS_ROLL
 
 #ifndef DEFAULT_PIDS_PITCH
-#define DEFAULT_PIDS_PITCH {58, 70, 30, 0}
+#define DEFAULT_PIDS_PITCH {58, 70, 56, 0}
 #endif //DEFAULT_PIDS_PITCH
 
 #ifndef DEFAULT_PIDS_YAW
-#define DEFAULT_PIDS_YAW {60, 70, 5, 0}
+#define DEFAULT_PIDS_YAW {60, 58, 8, 0}
 #endif //DEFAULT_PIDS_YAW
 
 #ifdef USE_RUNAWAY_TAKEOFF
@@ -353,11 +353,11 @@ void pidResetITerm(void)
 void pidInitConfig(const pidProfile_t *pidProfile)
 {
 
-    for (int axis = FD_ROLL; axis <= FD_YAW; axis++)
+    for (int axis = FD_ROLL; axis <= FD_YAW; axis++) // sliders found here
     {
         pidCoefficient[axis].Kp = PTERM_SCALE * pidProfile->pid[axis].P;
-        pidCoefficient[axis].Ki = ITERM_SCALE * pidProfile->pid[axis].I;
-        pidCoefficient[axis].Kd = DTERM_SCALE * pidProfile->pid[axis].D;
+        pidCoefficient[axis].Ki = ITERM_SCALE * pidProfile->pid[axis].P * pidProfile->pid[axis].I / 100.0f;
+        pidCoefficient[axis].Kd = DTERM_SCALE * pidProfile->pid[axis].P * pidProfile->pid[axis].D / 100.0f;
         setPointPTransition[axis] = pidProfile->setPointPTransition[axis] / 100.0f;
         setPointITransition[axis] = pidProfile->setPointITransition[axis] / 100.0f;
         setPointDTransition[axis] = pidProfile->setPointDTransition[axis] / 100.0f;
