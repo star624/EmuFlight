@@ -692,7 +692,6 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
         previousPidSetpoint[axis] = currentPidSetpoint;
 #ifndef USE_GYRO_IMUF9001
         gyro.gyroADCf[axis] = kalman_update(gyro.gyroADCf[axis], axis, currentPidSetpoint);
-        //GYRO_FILTER_DEBUG_SET(DEBUG_GYRO_FILTERED, axis, lrintf(gyro.gyroADCf[axis]));
 #endif // USE_GYRO_IMUF9001
 
         // -----calculate error rate
