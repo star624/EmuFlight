@@ -31,6 +31,7 @@
 #include "common/axis.h"
 #include "common/maths.h"
 #include "common/filter.h"
+#include "common/kalman.h"
 
 #include "config/config_reset.h"
 #include "pg/pg.h"
@@ -689,6 +690,10 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
 #endif // USE_YAW_SPIN_RECOVERY
 
         previousPidSetpoint[axis] = currentPidSetpoint;
+#ifndef USE_GYRO_IMUF9001
+        gyro.gyroADCf[axis] = kalman_update(gyro.gyroADCf[axis], axis, currentPidSetpoint);
+        //GYRO_FILTER_DEBUG_SET(DEBUG_GYRO_FILTERED, axis, lrintf(gyro.gyroADCf[axis]));
+#endif // USE_GYRO_IMUF9001
 
         // -----calculate error rate
         errorRate = currentPidSetpoint - gyro.gyroADCf[axis]; // r - y
