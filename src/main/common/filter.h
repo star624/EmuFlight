@@ -41,6 +41,14 @@ typedef struct biquadFilter_s {
     float x1, x2, y1, y2;
 } biquadFilter_t;
 
+typedef struct oneEuroFilter_s {
+    pt1Filter_t pt1;    //PT1 filter
+    float previousInput;//previous input
+    float dT;
+    uint16_t minCutoff; //Cutoff freq
+    uint8_t gain;       //Dynamic gain for 1 euro filter
+} oneEuroFilter_t;
+
 typedef enum {
     FILTER_PT1 = 0,
     FILTER_BIQUAD,
@@ -69,6 +77,9 @@ float pt1FilterGain(uint16_t f_cut, float dT);
 void pt1FilterInit(pt1Filter_t *filter, float k);
 void pt1FilterUpdateCutoff(pt1Filter_t *filter, float k);
 float pt1FilterApply(pt1Filter_t *filter, float input);
+
+void oneEuroFilterInit(oneEuroFilter_t *filter, uint16_t cutoff, uint8_t gain, float dT);
+float oneEuroFilterApply(oneEuroFilter_t *filter, float input);
 
 void slewFilterInit(slewFilter_t *filter, float slewLimit, float threshold);
 float slewFilterApply(slewFilter_t *filter, float input);

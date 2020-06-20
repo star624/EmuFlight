@@ -158,6 +158,9 @@ typedef struct gyroSensor_s {
     filterApplyFnPtr lowpass2FilterApplyFn;
     gyroLowpassFilter_t lowpass2Filter[XYZ_AXIS_COUNT];
 
+    filterApplyFnPtr oneEuroFilterApplyFn;
+    oneEuroFilter_t oneEuroFilter[XYZ_AXIS_COUNT];
+
     // notch filters
     filterApplyFnPtr notchFilter1ApplyFn;
     biquadFilter_t notchFilter1[XYZ_AXIS_COUNT];
@@ -290,6 +293,8 @@ PG_RESET_TEMPLATE(gyroConfig_t, gyroConfig,
     .yaw_spin_threshold = 1950,
     .dyn_notch_q_factor = 250,
     .dyn_notch_min_hz = 150,
+    .one_euro_min_frequency = 0,
+    .one_euro_gain = 0,
 );
 #endif //USE_GYRO_IMUF9001
 
@@ -809,6 +814,18 @@ void gyroInitSlewLimiter(gyroSensor_t *gyroSensor) {
 }
 #endif
 
+static void gyroInitOneEuro(gyroSensor_t *gyroSensor, uint16_t minFrequency, uint8_t gain)
+{
+    gyroSensor->oneEuroFilterApplyFn = nullFilterApply;
+
+    if (minFrequency != 0) {
+        gyroSensor->oneEuroFilterApplyFn = (filterApplyFnPtr)oneEuroFilterApply;
+        for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+            oneEuroFilterInit(&gyroSensor->oneEuroFilter[axis], minFrequency, gain, gyro.targetLooptime * 1e-6f);
+        }
+    }
+}
+
 static void gyroInitFilterNotch1(gyroSensor_t *gyroSensor, uint16_t notchHz, uint16_t notchCutoffHz)
 {
     gyroSensor->notchFilter1ApplyFn = nullFilterApply;
@@ -881,6 +898,8 @@ static void gyroInitSensorFilters(gyroSensor_t *gyroSensor)
       FILTER_LOWPASS2,
       gyroConfig()->gyro_lowpass2_type
     );
+
+    gyroInitOneEuro(gyroSensor, gyroConfig()->one_euro_min_frequency, gyroConfig()->one_euro_gain);
 
     gyroInitFilterNotch1(gyroSensor, gyroConfig()->gyro_soft_notch_hz_1, gyroConfig()->gyro_soft_notch_cutoff_1);
     gyroInitFilterNotch2(gyroSensor, gyroConfig()->gyro_soft_notch_hz_2, gyroConfig()->gyro_soft_notch_cutoff_2);

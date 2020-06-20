@@ -124,6 +124,9 @@ typedef struct gyroConfig_s {
     uint16_t imuf_yaw_q;
     uint16_t imuf_w;
     uint16_t imuf_sharpness;
+
+    uint16_t one_euro_min_frequency;
+    uint8_t  one_euro_gain;
 } gyroConfig_t;
 
 PG_DECLARE(gyroConfig_t, gyroConfig);

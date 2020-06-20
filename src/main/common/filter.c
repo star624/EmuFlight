@@ -69,6 +69,26 @@ FAST_CODE float pt1FilterApply(pt1Filter_t *filter, float input)
     return filter->state;
 }
 
+FAST_CODE void oneEuroFilterInit(oneEuroFilter_t *filter, uint16_t cutoff, uint8_t gain, float dT)
+{
+    filter->minCutoff = cutoff;
+    filter->gain = gain;
+    filter->previousInput = 0.0f;
+    filter->dT = dT;
+    pt1FilterInit(&filter->pt1, pt1FilterGain(cutoff, dT));
+}
+
+FAST_CODE float oneEuroFilterApply(oneEuroFilter_t *filter, float input)
+{
+    int frequency;
+
+    frequency = filter->minCutoff + fabsf(input - filter->previousInput) * filter->dT * filter->gain;
+    pt1FilterUpdateCutoff(&filter->pt1, pt1FilterGain(frequency, filter->dT));
+    filter->previousInput = pt1FilterApply(&filter->pt1, input);
+
+    return filter->previousInput;
+}
+
 // Slew filter with limit
 
 void slewFilterInit(slewFilter_t *filter, float slewLimit, float threshold)
