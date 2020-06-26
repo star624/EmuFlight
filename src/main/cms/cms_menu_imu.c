@@ -66,6 +66,9 @@ static uint16_t errorBoost;
 static uint8_t errorBoostLimit;
 static uint16_t errorBoostYaw;
 static uint8_t errorBoostLimitYaw;
+static uint8_t d_propwash;
+static uint8_t pb_low;
+static uint8_t pb_high;
 static uint8_t tempPid[3][3];
 static uint8_t tempPidWc[3];
 
@@ -136,6 +139,9 @@ static long cmsx_PidRead(void)
     errorBoostLimit = pidProfile->errorBoostLimit;
     errorBoostYaw = pidProfile->errorBoostYaw;
     errorBoostLimitYaw = pidProfile->errorBoostLimitYaw;
+    d_propwash = pidProfile->d_propwash;
+    pb_low = pidProfile->pb_low;
+    pb_high = pidProfile->pb_high;
     for (uint8_t i = 0; i < 3; i++) {
         tempPid[i][0] = pidProfile->pid[i].P;
         tempPid[i][1] = pidProfile->pid[i].I;
@@ -169,6 +175,9 @@ static long cmsx_PidWriteback(const OSD_Entry *self)
     pidProfile->errorBoostYaw = errorBoostYaw;
     pidProfile->errorBoostLimitYaw = errorBoostLimitYaw;
     pidProfile->i_decay = i_decay;
+    pidProfile->d_propwash = d_propwash;
+    pidProfile->pb_high = pb_high;
+    pidProfile->pb_low = pb_low;
     pidInitConfig(currentPidProfile);
 
     return 0;
@@ -198,6 +207,11 @@ static OSD_Entry cmsx_menuPidEntries[] =
     { "BOOST LIMIT YAW", OME_UINT8, NULL, &(OSD_UINT8_t){ &errorBoostLimitYaw,   0,  250,  1}, 0 },
 
     { "I_DECAY", OME_UINT8, NULL, &(OSD_UINT8_t){ &i_decay,  1, 10, 1 }, 0 },
+
+    { "D_PROPWASH", OME_UINT8, NULL, &(OSD_UINT8_t){ &d_propwash,  0, 100, 1 },  0 },
+    { "PB_LOW",   OME_UINT8, NULL, &(OSD_UINT8_t){ &pb_low,  10, 60, 1 },  0 },
+    { "PB_HIGH",  OME_UINT8, NULL, &(OSD_UINT8_t){ &pb_high,  10, 80, 1 },  0 },
+
     { "SAVE&EXIT",   OME_OSD_Exit, cmsMenuExit,   (void *)CMS_EXIT_SAVE, 0},
     { "BACK", OME_Back, NULL, NULL, 0 },
     { NULL, OME_END, NULL, NULL, 0 }

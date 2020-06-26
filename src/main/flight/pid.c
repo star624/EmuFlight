@@ -31,6 +31,7 @@
 #include "common/axis.h"
 #include "common/maths.h"
 #include "common/filter.h"
+#include "common/ButterFilter.h"
 
 #include "config/config_reset.h"
 #include "pg/pg.h"
@@ -172,6 +173,9 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .motor_output_limit = 100,
         .auto_profile_cell_count = AUTO_PROFILE_CELL_COUNT_STAY,
         .horizonTransition = 0,
+        .pb_low = 17,
+        .pb_high = 24,
+        .d_propwash = 5,
     );
 }
 
@@ -225,6 +229,8 @@ void pidInitFilters(const pidProfile_t *pidProfile)
 
     dtermLowpassApplyFn = nullFilterApply;
     dtermLowpass2ApplyFn = nullFilterApply;
+
+    createBandPassFilter(pidProfile->pb_low,  pidProfile->pb_high,  pidFrequency);
 
     for (int axis = FD_ROLL; axis <= FD_YAW; axis++)
     {
@@ -319,6 +325,7 @@ typedef struct pidCoefficient_s
 static FAST_RAM_ZERO_INIT pidCoefficient_t pidCoefficient[XYZ_AXIS_COUNT];
 static FAST_RAM_ZERO_INIT float maxVelocity[XYZ_AXIS_COUNT];
 static FAST_RAM_ZERO_INIT float feathered_pids;
+static FAST_RAM_ZERO_INIT float d_propwash;
 static FAST_RAM_ZERO_INIT uint8_t nfe_racermode;
 static FAST_RAM_ZERO_INIT float smart_dterm_smoothing[XYZ_AXIS_COUNT];
 static FAST_RAM_ZERO_INIT float setPointPTransition[XYZ_AXIS_COUNT];
@@ -364,6 +371,7 @@ void pidInitConfig(const pidProfile_t *pidProfile)
         smart_dterm_smoothing[axis] = pidProfile->dFilter[axis].smartSmoothing;
     }
     feathered_pids = pidProfile->feathered_pids / 100.0f;
+    d_propwash = (float)pidProfile->d_propwash / 100.0f;
     nfe_racermode = pidProfile->nfe_racermode;
     P_angle_low = pidProfile->pid[PID_LEVEL_LOW].P * 0.1f;
     D_angle_low = pidProfile->pid[PID_LEVEL_LOW].D * 0.00017f;
@@ -780,6 +788,18 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
                 dDelta = (float)(kdRingBufferSum[axis] / (float)(pidProfile->dFilter[axis].Wc));
                 kdRingBufferSum[axis] -= kdRingBuffer[axis][kdRingBufferPoint[axis]];
             }
+
+            if (axis != FD_YAW)
+            {
+                const float d_boost = applyBandPassFilter(axis, dDelta);
+                if (d_propwash > 0.0f)
+                {
+                    const float setpointCorrection = MAX(1.0f - fabsf(currentPidSetpoint / 500.0f), 0.0f);
+
+                  	dDelta += (d_boost * d_propwash * setpointCorrection);
+                }
+            }
+
             dDelta = pidCoefficient[axis].Kd * dDelta;
 
             float dDeltaMultiplier;

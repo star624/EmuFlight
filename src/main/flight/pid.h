@@ -106,6 +106,9 @@ typedef struct pidProfile_s {
     uint16_t errorBoostYaw;                 // the weight of the setpoint boost for yaw
     uint8_t errorBoostLimit;                // percentage of the error that the emu boost can boost
     uint8_t errorBoostLimitYaw;             // percentage of the error that the emu boost can boost for yaw
+    uint8_t d_propwash;					            // d_term boost for the propwash band
+    uint8_t pb_low;						            	// propwash band low frequency
+    uint8_t pb_high;				            		// propwash band high frequency
     uint8_t nfe_racermode;                  // turn on or off NFE RACERMODE
     uint16_t yawRateAccelLimit;             // yaw accel limiter for deg/sec/ms
     uint16_t rateAccelLimit;                // accel limiter roll/pitch deg/sec/ms
