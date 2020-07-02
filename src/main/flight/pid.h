@@ -53,12 +53,6 @@ typedef enum {
 } pidIndex_e;
 
 typedef enum {
-    SUPEREXPO_YAW_OFF = 0,
-    SUPEREXPO_YAW_ON,
-    SUPEREXPO_YAW_ALWAYS
-} pidSuperExpoYaw_e;
-
-typedef enum {
     PID_STABILISATION_OFF = 0,
     PID_STABILISATION_ON
 } pidStabilisationState_e;
@@ -68,6 +62,14 @@ typedef enum {
     PID_CRASH_RECOVERY_ON,
     PID_CRASH_RECOVERY_BEEP
 } pidCrashRecovery_e;
+
+typedef enum {
+    HARDFLEX = 0, //error
+    UNICORN, //setpoint
+    JUICY, //gyro
+    OFF,
+    QUICKFLASH_COUNT
+} QuickFlashRelaxType_e;
 
 typedef struct pidf_s {
     uint8_t P;
@@ -89,7 +91,6 @@ typedef struct pidProfile_s {
     dFilter_t dFilter[3];
 
     uint8_t dterm_filter_type;              // Filter selection for dterm
-    uint8_t itermWindupPointPercent;        // Experimental ITerm windup threshold, percent motor saturation
     uint16_t pidSumLimit;
     uint16_t pidSumLimitYaw;
     uint8_t pidAtMinThrottle;               // Disable/Enable pids on zero throttle. Normally even without airmode P and D would be active.
@@ -127,6 +128,13 @@ typedef struct pidProfile_s {
     uint8_t iterm_rotation;                 // rotates iterm to translate world errors to local coordinate system
     uint8_t motor_output_limit;             // Upper limit of the motor output (percent)
     int8_t auto_profile_cell_count;         // Cell count for this profile to be used with if auto PID profile switching is used
+    uint8_t integral_half_life;             // Integral half-life in tenths of second
+    uint8_t integral_half_life_yaw;         // Integral half-life for yaw in tenths of second
+    uint8_t QuickFlashRelax;                // Enable iterm suppression during error input
+    uint8_t QuickFlashRelaxYaw;             // Enable iterm suppression during error input
+    uint8_t QuickFlashRelaxCutoff;          // This cutoff frequency specifies a low pass filter which predicts average response of the quad to error
+    uint8_t QuickFlashRelaxType;            // Specifies type of relax algorithm
+    uint8_t itermWindupPointPercent;
 } pidProfile_t;
 
 #ifndef USE_OSD_SLAVE

@@ -66,6 +66,14 @@ static uint16_t errorBoost;
 static uint8_t errorBoostLimit;
 static uint16_t errorBoostYaw;
 static uint8_t errorBoostLimitYaw;
+static uint8_t integralHalfLife;
+static uint8_t integralHalfLifeYaw;
+static uint8_t QuickFlashRelax;
+static uint8_t QuickFlashRelaxYaw;
+static uint8_t QuickFlashRelaxCutoff;
+static uint8_t QuickFlashRelaxType;
+static uint8_t itermWindup;
+
 static uint8_t tempPid[3][3];
 static uint8_t tempPidWc[3];
 
@@ -81,6 +89,10 @@ static const char * const cms_offOnLabels[] = {
 
 static const char * const cms_throttleVbatCompTypeLabels[] = {
     "OFF", "BOOST", "LIMIT", "BOTH"
+};
+
+static const char * const cms_QuickFlashRelax[] = {
+    "HARDFLEX", "UNICORN", "JUICY", "OFF"
 };
 
 static long cmsx_menuImu_onEnter(void)
@@ -136,6 +148,13 @@ static long cmsx_PidRead(void)
     errorBoostLimit = pidProfile->errorBoostLimit;
     errorBoostYaw = pidProfile->errorBoostYaw;
     errorBoostLimitYaw = pidProfile->errorBoostLimitYaw;
+    integralHalfLife = pidProfile->integral_half_life;
+    integralHalfLifeYaw = pidProfile->integral_half_life_yaw;
+    QuickFlashRelax = pidProfile->QuickFlashRelax;
+    QuickFlashRelaxYaw = pidProfile->QuickFlashRelaxYaw;
+    QuickFlashRelaxCutoff = pidProfile->QuickFlashRelaxCutoff;
+    QuickFlashRelaxType = pidProfile->QuickFlashRelaxType;
+    itermWindup = pidProfile->itermWindupPointPercent;
     for (uint8_t i = 0; i < 3; i++) {
         tempPid[i][0] = pidProfile->pid[i].P;
         tempPid[i][1] = pidProfile->pid[i].I;
@@ -169,6 +188,13 @@ static long cmsx_PidWriteback(const OSD_Entry *self)
     pidProfile->errorBoostYaw = errorBoostYaw;
     pidProfile->errorBoostLimitYaw = errorBoostLimitYaw;
     pidProfile->i_decay = i_decay;
+    pidProfile->integral_half_life = integralHalfLife;
+    pidProfile->integral_half_life_yaw = integralHalfLifeYaw;
+    pidProfile->QuickFlashRelax = QuickFlashRelax;
+    pidProfile->QuickFlashRelaxYaw = QuickFlashRelaxYaw;
+    pidProfile->QuickFlashRelaxCutoff = QuickFlashRelaxCutoff;
+    pidProfile->QuickFlashRelaxType = QuickFlashRelaxType;
+    pidProfile->itermWindupPointPercent = itermWindup;
     pidInitConfig(currentPidProfile);
 
     return 0;
@@ -197,7 +223,17 @@ static OSD_Entry cmsx_menuPidEntries[] =
     { "EMU BOOST YAW", OME_UINT16, NULL, &(OSD_UINT16_t){ &errorBoostYaw,        0,  1000,  5}, 0 },
     { "BOOST LIMIT YAW", OME_UINT8, NULL, &(OSD_UINT8_t){ &errorBoostLimitYaw,   0,  250,  1}, 0 },
 
-    { "I_DECAY", OME_UINT8, NULL, &(OSD_UINT8_t){ &i_decay,  1, 10, 1 }, 0 },
+    { "I DECAY", OME_UINT8, NULL, &(OSD_UINT8_t){ &i_decay,  1, 10, 1 }, 0 },
+
+    { "I HALF LIFE", OME_UINT8, NULL, &(OSD_UINT8_t){ &integralHalfLife,  0, 100, 1 }, 0 },
+    { "I HALF LIFE YAW", OME_UINT8, NULL, &(OSD_UINT8_t){ &integralHalfLifeYaw,  0, 100, 1 }, 0 },
+
+    { "I RELAX", OME_UINT8, NULL, &(OSD_UINT8_t){ &QuickFlashRelax,  10, 100, 1 }, 0 },
+    { "I RELAX YAW", OME_UINT8, NULL, &(OSD_UINT8_t){ &QuickFlashRelaxYaw,  10, 100, 1 }, 0 },
+    { "I RELAX CUTOFF", OME_UINT8, NULL, &(OSD_UINT8_t){ &QuickFlashRelaxCutoff,  1, 100, 1 }, 0 },
+    { "I RELAX TYPE",  OME_TAB,   NULL, &(OSD_TAB_t)    { &QuickFlashRelaxType, QUICKFLASH_COUNT - 1, cms_QuickFlashRelax}, 0 },
+    { "I WINDUP", OME_UINT8, NULL, &(OSD_UINT8_t){ &itermWindup, 0, 100, 1}, 0},
+
     { "SAVE&EXIT",   OME_OSD_Exit, cmsMenuExit,   (void *)CMS_EXIT_SAVE, 0},
     { "BACK", OME_Back, NULL, NULL, 0 },
     { NULL, OME_END, NULL, NULL, 0 }
