@@ -110,4 +110,3 @@ typedef enum {
     CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE
 } crsfAddress_e;
-
