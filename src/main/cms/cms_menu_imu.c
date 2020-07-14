@@ -306,6 +306,7 @@ static uint8_t  cmsx_nfe_racermode;
 static uint8_t  cmsx_throttleBoost;
 static uint8_t  cmsx_motorOutputLimit;
 static int8_t   cmsx_autoProfileCellCount;
+static uint8_t  cmsx_foreAftMixerFixer;
 
 static long cmsx_profileOtherOnEnter(void)
 {
@@ -327,7 +328,7 @@ static long cmsx_profileOtherOnEnter(void)
     cmsx_D_angle_low =       pidProfile->pid[PID_LEVEL_LOW].D;
     cmsx_P_angle_high =      pidProfile->pid[PID_LEVEL_HIGH].P;
     cmsx_D_angle_high =      pidProfile->pid[PID_LEVEL_HIGH].D;
-    cmsx_F_angle =       pidProfile->pid[PID_LEVEL_LOW].F;
+    cmsx_F_angle =           pidProfile->pid[PID_LEVEL_LOW].F;
     cmsx_horizonTransition = pidProfile->horizonTransition;
 
     cmsx_nfe_racermode = pidProfile->nfe_racermode;
@@ -335,6 +336,7 @@ static long cmsx_profileOtherOnEnter(void)
     cmsx_throttleBoost = pidProfile->throttle_boost;
     cmsx_motorOutputLimit = pidProfile->motor_output_limit;
     cmsx_autoProfileCellCount = pidProfile->auto_profile_cell_count;
+    cmsx_foreAftMixerFixer = mixerConfig()->foreAftMixerFixer;
 
     return 0;
 }
@@ -353,7 +355,6 @@ static long cmsx_profileOtherOnExit(const OSD_Entry *self)
     pidProfile->setPointPTransition[YAW] = cmsx_setPointPTransition[YAW];
     pidProfile->setPointITransition[YAW] = cmsx_setPointITransition[YAW];
     pidProfile->setPointDTransition[YAW] = cmsx_setPointDTransition[YAW];
-    pidInitConfig(currentPidProfile);
 
     pidProfile->pid[PID_LEVEL_LOW].P = cmsx_P_angle_low;
     pidProfile->pid[PID_LEVEL_LOW].D = cmsx_D_angle_low;
@@ -367,7 +368,9 @@ static long cmsx_profileOtherOnExit(const OSD_Entry *self)
     pidProfile->throttle_boost = cmsx_throttleBoost;
     pidProfile->motor_output_limit = cmsx_motorOutputLimit;
     pidProfile->auto_profile_cell_count = cmsx_autoProfileCellCount;
+    mixerConfigMutable()->foreAftMixerFixer = cmsx_foreAftMixerFixer;
 
+    pidInitConfig(currentPidProfile);
     initEscEndpoints();
     return 0;
 }
@@ -375,15 +378,17 @@ static long cmsx_profileOtherOnExit(const OSD_Entry *self)
 static OSD_Entry cmsx_menuProfileOtherEntries[] = {
     { "-- OTHER PP --", OME_Label, NULL, pidProfileIndexString, 0 },
 
-    { "SPA ROLL P",      OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointPTransition[ROLL], 0,    250,   1, 10 }, 0 },
-    { "SPA ROLL I",      OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointITransition[ROLL], 0,    250,   1, 10 }, 0 },
-    { "SPA ROLL D",      OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointDTransition[ROLL], 0,    250,   1, 10 }, 0 },
-    { "SPA PITCH P",     OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointPTransition[PITCH],0,    250,   1, 10 }, 0 },
-    { "SPA PITCH I",     OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointITransition[PITCH],0,    250,   1, 10 }, 0 },
-    { "SPA PITCH D",     OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointDTransition[PITCH],0,    250,   1, 10 }, 0 },
-    { "SPA YAW P",       OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointPTransition[YAW],  0,    250,   1, 10 }, 0 },
-    { "SPA YAW I",       OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointITransition[YAW],  0,    250,   1, 10 }, 0 },
-    { "SPA YAW D",       OME_FLOAT,  NULL, &(OSD_FLOAT_t)  { &cmsx_setPointDTransition[YAW],  0,    250,   1, 10 }, 0 },
+    { "FORE AFT MIXER",  OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_foreAftMixerFixer,         0,    200,   1  }   , 0 },
+
+    { "SPA ROLL P",      OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointPTransition[ROLL], 0,    250,   1  }   , 0 },
+    { "SPA ROLL I",      OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointITransition[ROLL], 0,    250,   1  }   , 0 },
+    { "SPA ROLL D",      OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointDTransition[ROLL], 0,    250,   1  }   , 0 },
+    { "SPA PITCH P",     OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointPTransition[PITCH],0,    250,   1  }   , 0 },
+    { "SPA PITCH I",     OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointITransition[PITCH],0,    250,   1  }   , 0 },
+    { "SPA PITCH D",     OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointDTransition[PITCH],0,    250,   1  }   , 0 },
+    { "SPA YAW P",       OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointPTransition[YAW],  0,    250,   1  }   , 0 },
+    { "SPA YAW I",       OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointITransition[YAW],  0,    250,   1  }   , 0 },
+    { "SPA YAW D",       OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_setPointDTransition[YAW],  0,    250,   1  }   , 0 },
     { "ANGLE P LOW",     OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_P_angle_low,               0,    200,   1  }   , 0 },
     { "ANGLE D LOW",     OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_D_angle_low,               0,    200,   1  }   , 0 },
     { "ANGLE P HIGH",    OME_UINT8,  NULL, &(OSD_UINT8_t)  { &cmsx_P_angle_high,              0,    200,   1  }   , 0 },

@@ -78,6 +78,7 @@ PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .yaw_motors_reversed = false,
     .crashflip_motor_percent = 0,
     .crashflip_power_percent = 70,
+    .foreAftMixerFixer = 100,
 );
 
 PG_REGISTER_WITH_RESET_FN(motorConfig_t, motorConfig, PG_MOTOR_CONFIG, 1);
@@ -124,6 +125,8 @@ PG_REGISTER_ARRAY(motorMixer_t, MAX_SUPPORTED_MOTORS, customMotorMixer, PG_MOTOR
 
 static FAST_RAM_ZERO_INIT uint8_t motorCount;
 static FAST_RAM_ZERO_INIT float motorMixRange;
+static FAST_RAM_ZERO_INIT uint8_t foreMotorMixerFixer;
+static FAST_RAM_ZERO_INIT uint8_t aftMotorMixerFixer;
 
 float FAST_RAM_ZERO_INIT motor[MAX_SUPPORTED_MOTORS];
 //float FAST_RAM_ZERO_INIT previousMotor[MAX_SUPPORTED_MOTORS];
@@ -436,6 +439,10 @@ void mixerInit(mixerMode_e mixerMode)
     if (mixerIsTricopter()) {
         mixerTricopterInit();
     }
+
+    foreMotorMixerFixer = mixerConfig()->foreAftMixerFixer / 100.0f;
+    aftMotorMixerFixer = 2.0f - foreMotorMixerFixer;
+
 }
 
 #ifndef USE_QUAD_MIXER_ONLY
@@ -700,9 +707,9 @@ static void applyFlipOverAfterCrashModeToMotors(void)
 
         for (int i = 0; i < motorCount; ++i) {
             float motorOutput =
-                signPitch*currentMixer[i].pitch +
-                signRoll*currentMixer[i].roll +
-                signYaw*currentMixer[i].yaw;
+                signPitch * currentMixer[i].pitch +
+                signRoll * currentMixer[i].roll +
+                signYaw * currentMixer[i].yaw;
 
             if (motorOutput < 0) {
                 if (mixerConfig()->crashflip_motor_percent > 0) {
@@ -731,7 +738,12 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS])
     // Now add in the desired throttle, but keep in a range that doesn't clip adjusted
     // roll/pitch/yaw. This could move throttle down, but also up for those low throttle flips.
     for (int i = 0; i < motorCount; i++) {
-        float motorOutput = motorOutputMin + (motorOutputRange * (motorOutputMixSign * motorMix[i] + throttle * currentMixer[i].throttle));
+      float motorOutput;
+      if (currentMixer[i].pitch >= 0) {
+        motorOutput = motorOutputMin + (motorOutputRange * (motorOutputMixSign * motorMix[i] + throttle * currentMixer[i].throttle * aftMotorMixerFixer));
+      } else {
+        motorOutput = motorOutputMin + (motorOutputRange * (motorOutputMixSign * motorMix[i] + throttle * currentMixer[i].throttle * foreMotorMixerFixer));
+      }
         if (mixerIsTricopter()) {
             motorOutput += mixerTricopterMotorCorrection(i);
         }
@@ -753,38 +765,6 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS])
         }
         motor[i] = motorOutput;
     }
-
-// float difference;
-// float looptimeAccounter;
-// looptimeAccounter = gyro.targetLooptime * pidConfig()->pid_process_denom;
-//     for (int motorNum = 0; motorNum < motorCount; motorNum++)
-// {
-//   difference = fabsf(motor[motorNum] - previousMotor[motorNum]);
-//   if (difference <= (looptimeAccounter * motorOutputRange * 0.00002f))
-//   {
-//     motor[motorNum] = previousMotor[motorNum];
-//   }
-//   else
-//   {
-//     if (difference > (looptimeAccounter * motorOutputRange * 0.00040f))
-//     {
-//       if (motor[motorNum] > previousMotor[motorNum])
-//       {
-//         motor[motorNum] = previousMotor[motorNum] + (looptimeAccounter * motorOutputRange * 0.00040f); /* increase by max 5% every ms */
-//         previousMotor[motorNum] = motor[motorNum];
-//       }
-//       else
-//       {
-//         motor[motorNum] = previousMotor[motorNum] - (looptimeAccounter * motorOutputRange * 0.00040f); /* decrease by max 5% every ms */
-//         previousMotor[motorNum] = motor[motorNum];
-//       }
-//     }
-//     else
-//     {
-//       previousMotor[motorNum] = motor[motorNum];
-//     }
-//   }
-// }
 
     // Disarmed mode
     if (!ARMING_FLAG(ARMED)) {
@@ -862,7 +842,8 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     float motorMix[MAX_SUPPORTED_MOTORS];
     float motorMixMax = 0, motorMixMin = 0;
     for (int i = 0; i < motorCount; i++) {
-        float mix =
+        float mix;
+        mix =
             scaledAxisPidRoll  * currentMixer[i].roll +
             scaledAxisPidPitch * currentMixer[i].pitch +
             scaledAxisPidYaw   * currentMixer[i].yaw;
