@@ -125,8 +125,8 @@ PG_REGISTER_ARRAY(motorMixer_t, MAX_SUPPORTED_MOTORS, customMotorMixer, PG_MOTOR
 
 static FAST_RAM_ZERO_INIT uint8_t motorCount;
 static FAST_RAM_ZERO_INIT float motorMixRange;
-static FAST_RAM_ZERO_INIT uint8_t foreMotorMixerFixer;
-static FAST_RAM_ZERO_INIT uint8_t aftMotorMixerFixer;
+static FAST_RAM_ZERO_INIT float foreMotorMixerFixer;
+static FAST_RAM_ZERO_INIT float aftMotorMixerFixer;
 
 float FAST_RAM_ZERO_INIT motor[MAX_SUPPORTED_MOTORS];
 //float FAST_RAM_ZERO_INIT previousMotor[MAX_SUPPORTED_MOTORS];
@@ -739,10 +739,12 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS])
     // roll/pitch/yaw. This could move throttle down, but also up for those low throttle flips.
     for (int i = 0; i < motorCount; i++) {
       float motorOutput;
-      if (currentMixer[i].pitch >= 0) {
+      if (currentMixer[i].pitch > 0) {
         motorOutput = motorOutputMin + (motorOutputRange * (motorOutputMixSign * motorMix[i] + throttle * currentMixer[i].throttle * aftMotorMixerFixer));
-      } else {
+      } else if (currentMixer[i].pitch < 0) {
         motorOutput = motorOutputMin + (motorOutputRange * (motorOutputMixSign * motorMix[i] + throttle * currentMixer[i].throttle * foreMotorMixerFixer));
+      } else {
+        motorOutput = motorOutputMin + (motorOutputRange * (motorOutputMixSign * motorMix[i] + throttle * currentMixer[i].throttle));
       }
         if (mixerIsTricopter()) {
             motorOutput += mixerTricopterMotorCorrection(i);
@@ -842,8 +844,7 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     float motorMix[MAX_SUPPORTED_MOTORS];
     float motorMixMax = 0, motorMixMin = 0;
     for (int i = 0; i < motorCount; i++) {
-        float mix;
-        mix =
+        float mix =
             scaledAxisPidRoll  * currentMixer[i].roll +
             scaledAxisPidPitch * currentMixer[i].pitch +
             scaledAxisPidYaw   * currentMixer[i].yaw;
