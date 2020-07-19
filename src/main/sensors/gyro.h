@@ -69,6 +69,7 @@ typedef enum {
     FILTER_LOWPASS = 0,
     FILTER_LOWPASS2
 } filterSlots;
+
 #if defined(USE_GYRO_IMUF9001)
 typedef enum {
     IMUF_RATE_32K = 0,

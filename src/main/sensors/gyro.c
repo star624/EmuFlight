@@ -177,7 +177,7 @@ typedef struct gyroSensor_s {
 #endif // USE_YAW_SPIN_RECOVERY
 
 #ifdef USE_GYRO_DATA_ANALYSE
-    gyroAnalyseState_t gyroAnalyseState;
+    fftAnalyseState_t fftAnalyseState;
     float dynNotchQ;
 #endif
 } gyroSensor_t;
@@ -615,7 +615,7 @@ static bool gyroInitSensor(gyroSensor_t *gyroSensor)
     gyroInitSensorFilters(gyroSensor);
 
 #ifdef USE_GYRO_DATA_ANALYSE
-    gyroDataAnalyseStateInit(&gyroSensor->gyroAnalyseState, gyro.targetLooptime);
+    fftDataAnalyseStateInit(&gyroSensor->fftAnalyseState, gyro.targetLooptime, gyroConfig()->dyn_notch_min_hz, gyroConfig()->dyn_notch_max_hz);
 #endif
 
     return true;
@@ -1142,9 +1142,9 @@ static FAST_CODE void checkForYawSpin(gyroSensor_t *gyroSensor, timeUs_t current
 #undef GYRO_FILTER_DEBUG_SET
 
 static FAST_CODE void dynamicGyroNotchFiltersUpdate(gyroSensor_t* gyroSensor) {
-    if (gyroSensor->gyroAnalyseState.filterUpdateExecute) {
-        const uint8_t axis = gyroSensor->gyroAnalyseState.filterUpdateAxis;
-        const uint16_t frequency = gyroSensor->gyroAnalyseState.filterUpdateFrequency;
+    if (gyroSensor->fftAnalyseState.filterUpdateExecute) {
+        const uint8_t axis = gyroSensor->fftAnalyseState.filterUpdateAxis;
+        const uint16_t frequency = gyroSensor->fftAnalyseState.filterUpdateFrequency;
 
         biquadFilterUpdate(&gyroSensor->notchFilterDyn[0][axis], frequency, gyro.targetLooptime, gyroSensor->dynNotchQ, FILTER_NOTCH);
         biquadFilterUpdate(&gyroSensor->notchFilterDyn[1][axis], frequency, gyro.targetLooptime, gyroSensor->dynNotchQ, FILTER_NOTCH);
@@ -1224,7 +1224,7 @@ static FAST_CODE_NOINLINE void gyroUpdateSensor(gyroSensor_t* gyroSensor, timeUs
 
 #ifdef USE_GYRO_DATA_ANALYSE
     if (isDynamicFilterActive()) {
-        gyroDataAnalyse(&gyroSensor->gyroAnalyseState);
+        fftDataAnalyse(&gyroSensor->fftAnalyseState);
         dynamicGyroNotchFiltersUpdate(gyroSensor);
     }
 #endif

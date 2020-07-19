@@ -26,7 +26,7 @@
 
 #define FFT_WINDOW_SIZE 32
 
-typedef struct gyroAnalyseState_s {
+typedef struct fftAnalyseState_s {
     // accumulator for oversampled data => no aliasing and less noise
     uint8_t sampleCount;
     uint8_t maxSampleCount;
@@ -46,16 +46,22 @@ typedef struct gyroAnalyseState_s {
     float fftData[FFT_WINDOW_SIZE];
     float rfftData[FFT_WINDOW_SIZE];
 
+    float hanningWindow[FFT_WINDOW_SIZE];
+
     float centerFreq[XYZ_AXIS_COUNT];
     bool filterUpdateExecute;
     uint8_t filterUpdateAxis;
     float filterUpdateFrequency;
-} gyroAnalyseState_t;
+
+    float fftResolution;
+    uint8_t fftStartBin;
+    uint16_t dynNotchMinHz;
+    uint16_t dynNotchMaxHz;
+    float smoothFactor;
+} fftAnalyseState_t;
 
 STATIC_ASSERT(FFT_WINDOW_SIZE <= (uint8_t) -1, window_size_greater_than_underlying_type);
 
-void gyroDataAnalyseStateInit(gyroAnalyseState_t *gyroAnalyse, uint32_t targetLooptime);
-void gyroDataAnalysePush(gyroAnalyseState_t *gyroAnalyse, int axis, float sample);
-void gyroDataAnalyse(gyroAnalyseState_t *gyroAnalyse);
-uint16_t getMaxFFT(void);
-void resetMaxFFT(void);
+void fftDataAnalyseStateInit(fftAnalyseState_t *state, uint32_t targetLooptimeUs, uint16_t minHz, uint16_t maxHz);
+void fftDataAnalysePush(fftAnalyseState_t *gyroAnalyse, int axis, float sample);
+void fftDataAnalyse(fftAnalyseState_t *gyroAnalyse);

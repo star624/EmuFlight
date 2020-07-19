@@ -57,6 +57,7 @@
 #include "sensors/gyro.h"
 #include "sensors/acceleration.h"
 #include "sensors/battery.h"
+#include "sensors/gyroanalyse.h"
 
 const char pidNames[] =
     "ROLL;"
@@ -175,6 +176,9 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .motor_output_limit = 100,
         .auto_profile_cell_count = AUTO_PROFILE_CELL_COUNT_STAY,
         .horizonTransition = 0,
+        .dtermDynNotchQ = 400,
+        .dterm_dyn_notch_min_hz = 100,
+        .dterm_dyn_notch_max_hz = 400,
     );
 }
 
@@ -210,6 +214,9 @@ static FAST_RAM filterApplyFnPtr dtermLowpassApplyFn = nullFilterApply;
 static FAST_RAM_ZERO_INIT dtermLowpass_t dtermLowpass[XYZ_AXIS_COUNT];
 static FAST_RAM filterApplyFnPtr dtermLowpass2ApplyFn = nullFilterApply;
 static FAST_RAM_ZERO_INIT dtermLowpass_t dtermLowpass2[XYZ_AXIS_COUNT];
+static FAST_RAM filterApplyFnPtr dtermDynNotchApplyFn;
+static FAST_RAM_ZERO_INIT biquadFilter_t dtermNotchFilterDyn[XYZ_AXIS_COUNT];
+static FAST_RAM_ZERO_INIT fftAnalyseState_t dtermFFTAnalyseState;
 
 static FAST_RAM_ZERO_INIT float iDecay;
 
@@ -228,6 +235,7 @@ void pidInitFilters(const pidProfile_t *pidProfile)
 
     dtermLowpassApplyFn = nullFilterApply;
     dtermLowpass2ApplyFn = nullFilterApply;
+    dtermDynNotchApplyFn = nullFilterApply;
 
     for (int axis = FD_ROLL; axis <= FD_YAW; axis++)
     {
@@ -246,6 +254,7 @@ void pidInitFilters(const pidProfile_t *pidProfile)
                 break;
             }
         }
+
         if (pidProfile->dFilter[axis].dLpf2 && pidProfile->dFilter[axis].dLpf2 <= pidFrequencyNyquist)
         {
             switch (pidProfile->dterm_filter_type)
@@ -260,6 +269,15 @@ void pidInitFilters(const pidProfile_t *pidProfile)
                 biquadFilterInitLPF(&dtermLowpass2[axis].biquadFilter, pidProfile->dFilter[axis].dLpf2, targetPidLooptime);
                 break;
             }
+        }
+    }
+
+    fftDataAnalyseStateInit(&dtermFFTAnalyseState, targetPidLooptime, pidProfile->dterm_dyn_notch_min_hz, pidProfile->dterm_dyn_notch_max_hz);
+
+    if (pidProfile->dtermDynNotchQ > 0) {
+        dtermDynNotchApplyFn = (filterApplyFnPtr)biquadFilterApplyDF1; // must be this function, not DF2
+        for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+             biquadFilterInit(&dtermNotchFilterDyn[axis], 400, targetPidLooptime, pidProfile->dtermDynNotchQ / 100.0f, FILTER_NOTCH);
         }
     }
 
@@ -810,6 +828,10 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
                 previousdDelta[axis] = dDelta;
                 DEBUG_SET(DEBUG_SMART_SMOOTHING, axis, dDeltaMultiplier * 1000.0f);
             }
+            if (pidProfile->dtermDynNotchQ > 0) {
+            fftDataAnalysePush(&dtermFFTAnalyseState, axis, dDelta);
+            dDelta = dtermDynNotchApplyFn((filter_t *)&dtermNotchFilterDyn[axis], dDelta);
+          }
             // Divide rate change by dT to get differential (ie dr/dt).
             // dT is fixed and calculated from the target PID loop time
             // This is done to avoid DTerm spikes that occur with dynamically
@@ -857,6 +879,16 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
         pidData[axis].D = pidData[axis].D * getThrottleDAttenuation() * setPointDAttenuation[axis];
         const float pidSum = pidData[axis].P + pidData[axis].I + pidData[axis].D;
         pidData[axis].Sum = pidSum;
+    }
+    if (pidProfile->dtermDynNotchQ > 0) {
+        fftDataAnalyse(&dtermFFTAnalyseState);
+
+        if (dtermFFTAnalyseState.filterUpdateExecute) {
+            const uint8_t axis = dtermFFTAnalyseState.filterUpdateAxis;
+            const uint16_t frequency = dtermFFTAnalyseState.filterUpdateFrequency;
+
+            biquadFilterUpdate(&dtermNotchFilterDyn[axis], frequency, targetPidLooptime, pidProfile->dtermDynNotchQ / 100.0f, FILTER_NOTCH);
+        }
     }
 }
 
