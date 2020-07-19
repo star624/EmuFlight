@@ -91,7 +91,8 @@ typedef struct pidProfile_s {
     uint8_t dterm_filter_type;              // Filter selection for dterm
     uint16_t dtermDynNotchQ;                // Q value for the dynamic dterm notch
     uint16_t dterm_dyn_notch_min_hz;
-    uint16_t dterm_dyn_notch_max_hz;                
+    uint16_t dterm_dyn_notch_max_hz;
+    uint8_t dtermDynLocation;     
 
     uint8_t itermWindupPointPercent;        // Experimental ITerm windup threshold, percent motor saturation
     uint16_t pidSumLimit;

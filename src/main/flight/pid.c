@@ -179,6 +179,7 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .dtermDynNotchQ = 400,
         .dterm_dyn_notch_min_hz = 100,
         .dterm_dyn_notch_max_hz = 400,
+        .dtermDynLocation = 1,
     );
 }
 
@@ -791,6 +792,10 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
             previousError[axis] = errorRate;
             float dDelta = ((feathered_pids * pureMeasurement) + ((1 - feathered_pids) * pureError)) * pidFrequency; //calculating the dterm determine how much is calculated using measurement vs error
             //filter the dterm
+            if (pidProfile->dtermDynNotchQ > 0 && pidProfile->dtermDynLocation == 0) {
+                fftDataAnalysePush(&dtermFFTAnalyseState, axis, dDelta);
+                dDelta = dtermDynNotchApplyFn((filter_t *)&dtermNotchFilterDyn[axis], dDelta);
+            }
             dDelta = dtermLowpassApplyFn((filter_t *)&dtermLowpass[axis], dDelta);
             dDelta = dtermLowpass2ApplyFn((filter_t *)&dtermLowpass2[axis], dDelta);
 
@@ -828,10 +833,11 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
                 previousdDelta[axis] = dDelta;
                 DEBUG_SET(DEBUG_SMART_SMOOTHING, axis, dDeltaMultiplier * 1000.0f);
             }
-            if (pidProfile->dtermDynNotchQ > 0) {
-            fftDataAnalysePush(&dtermFFTAnalyseState, axis, dDelta);
-            dDelta = dtermDynNotchApplyFn((filter_t *)&dtermNotchFilterDyn[axis], dDelta);
-          }
+
+            if (pidProfile->dtermDynNotchQ > 0 && pidProfile->dtermDynLocation == 1) {
+                fftDataAnalysePush(&dtermFFTAnalyseState, axis, dDelta);
+                dDelta = dtermDynNotchApplyFn((filter_t *)&dtermNotchFilterDyn[axis], dDelta);
+            }
             // Divide rate change by dT to get differential (ie dr/dt).
             // dT is fixed and calculated from the target PID loop time
             // This is done to avoid DTerm spikes that occur with dynamically

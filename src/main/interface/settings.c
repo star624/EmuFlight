@@ -829,6 +829,8 @@ const clivalue_t valueTable[] = {
     { "dterm_dyn_q",                VAR_UINT16 | PROFILE_VALUE, .config.minmax = { 0, 16000 }, PG_PID_PROFILE, offsetof(pidProfile_t, dtermDynNotchQ) },
     { "dterm_dyn_min",              VAR_UINT16 | PROFILE_VALUE, .config.minmax = { 60, 400 }, PG_PID_PROFILE, offsetof(pidProfile_t, dterm_dyn_notch_min_hz) },
     { "dterm_dyn_max",              VAR_UINT16 | PROFILE_VALUE, .config.minmax = { 150, 1500 }, PG_PID_PROFILE, offsetof(pidProfile_t, dterm_dyn_notch_max_hz) },
+    { "dterm_dyn_location",         VAR_UINT8  | PROFILE_VALUE, .config.minmax = { 0, 1 }, PG_PID_PROFILE, offsetof(pidProfile_t, dtermDynLocation) },
+
     { "smart_dterm_smoothing_roll", VAR_UINT8  | PROFILE_VALUE, .config.minmax = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, dFilter[ROLL].smartSmoothing) },
     { "smart_dterm_smoothing_pitch",VAR_UINT8  | PROFILE_VALUE, .config.minmax = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, dFilter[PITCH].smartSmoothing) },
     { "smart_dterm_smoothing_yaw",  VAR_UINT8  | PROFILE_VALUE, .config.minmax = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, dFilter[YAW].smartSmoothing) },
