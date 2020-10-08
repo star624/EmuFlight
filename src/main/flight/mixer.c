@@ -851,6 +851,9 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     }
 
     	// #ifdef TRANSIENT_MIX_INCREASING_HZ
+      //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      //NOTE FOR QUICKFLASH, try to rewrite this but do it using pidsum change vs stick change!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     	// 	float maxSpeedRxcopy = 0.0f;
     	// 	static float lastRxcopy[4];
     	// 	for (int i = 0; i < 4; ++i) {
@@ -893,7 +896,7 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     				reduceAmount = minMix;
     			}
     		}
-    		if (reduceAmount != 0.0f) {
+    		if (reduceAmount > 0.0f || (isAirmodeActive() && reduceAmount != 0.0f)) {
     	// #ifdef TRANSIENT_MIX_INCREASING_HZ
     	// 		if ( reduceAmount < -transientMixIncreaseLimit &&
     	// 			mixmax > idle_offset + 0.1f ) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
