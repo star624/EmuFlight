@@ -731,7 +731,7 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS])
     // Now add in the desired throttle, but keep in a range that doesn't clip adjusted
     // roll/pitch/yaw. This could move throttle down, but also up for those low throttle flips.
     for (int i = 0; i < motorCount; i++) {
-        float motorOutput = motorOutputMin + (motorOutputRange * (motorOutputMixSign * motorMix[i] + throttle * currentMixer[i].throttle));
+        float motorOutput = motorOutputMin + (motorOutputRange * (motorOutputMixSign * motorMix[i]));
         if (mixerIsTricopter()) {
             motorOutput += mixerTricopterMotorCorrection(i);
         }
@@ -753,38 +753,6 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS])
         }
         motor[i] = motorOutput;
     }
-
-// float difference;
-// float looptimeAccounter;
-// looptimeAccounter = gyro.targetLooptime * pidConfig()->pid_process_denom;
-//     for (int motorNum = 0; motorNum < motorCount; motorNum++)
-// {
-//   difference = fabsf(motor[motorNum] - previousMotor[motorNum]);
-//   if (difference <= (looptimeAccounter * motorOutputRange * 0.00002f))
-//   {
-//     motor[motorNum] = previousMotor[motorNum];
-//   }
-//   else
-//   {
-//     if (difference > (looptimeAccounter * motorOutputRange * 0.00040f))
-//     {
-//       if (motor[motorNum] > previousMotor[motorNum])
-//       {
-//         motor[motorNum] = previousMotor[motorNum] + (looptimeAccounter * motorOutputRange * 0.00040f); /* increase by max 5% every ms */
-//         previousMotor[motorNum] = motor[motorNum];
-//       }
-//       else
-//       {
-//         motor[motorNum] = previousMotor[motorNum] - (looptimeAccounter * motorOutputRange * 0.00040f); /* decrease by max 5% every ms */
-//         previousMotor[motorNum] = motor[motorNum];
-//       }
-//     }
-//     else
-//     {
-//       previousMotor[motorNum] = motor[motorNum];
-//     }
-//   }
-// }
 
     // Disarmed mode
     if (!ARMING_FLAG(ARMED)) {
@@ -856,55 +824,89 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
         throttle = applyThrottleLimit(throttle);
     }
 
+    #if defined(USE_THROTTLE_BOOST)
+        if (throttleBoost > 0.0f) {
+            const float throttleHpf = throttle - pt1FilterApply(&throttleLpf, throttle);
+            throttle = constrainf(throttle + throttleBoost * throttleHpf, 0.0f, 1.0f);
+        }
+    #endif
 
+    #ifdef USE_GPS_RESCUE
+        // If gps rescue is active then override the throttle. This prevents things
+        // like throttle boost or throttle limit from negatively affecting the throttle.
+        if (FLIGHT_MODE(GPS_RESCUE_MODE)) {
+            throttle = gpsRescueGetThrottle();
+        }
+    #endif
 
     // Find roll/pitch/yaw desired output
     float motorMix[MAX_SUPPORTED_MOTORS];
-    float motorMixMax = 0, motorMixMin = 0;
     for (int i = 0; i < motorCount; i++) {
         float mix =
+            throttle * currentMixer[i].throttle +
             scaledAxisPidRoll  * currentMixer[i].roll +
             scaledAxisPidPitch * currentMixer[i].pitch +
             scaledAxisPidYaw   * currentMixer[i].yaw;
-
-        if (mix > motorMixMax) {
-            motorMixMax = mix;
-        } else if (mix < motorMixMin) {
-            motorMixMin = mix;
-        }
-        motorMix[i] = mix;
+            motorMix[i] = mix;
     }
 
-#if defined(USE_THROTTLE_BOOST)
-    if (throttleBoost > 0.0f) {
-        const float throttleHpf = throttle - pt1FilterApply(&throttleLpf, throttle);
-        throttle = constrainf(throttle + throttleBoost * throttleHpf, 0.0f, 1.0f);
-    }
-#endif
+    	// #ifdef TRANSIENT_MIX_INCREASING_HZ
+    	// 	float maxSpeedRxcopy = 0.0f;
+    	// 	static float lastRxcopy[4];
+    	// 	for (int i = 0; i < 4; ++i) {
+    	// 		const float absSpeedRxcopy = fabsf(rxcopy[i] - lastRxcopy[i]) / LOOPTIME * 1e6f * 0.1f;
+    	// 		lastRxcopy[ i ] = rxcopy[ i ];
+    	// 		if (absSpeedRxcopy > maxSpeedRxcopy) {
+    	// 			maxSpeedRxcopy = absSpeedRxcopy;
+    	// 		}
+    	// 	}
+    	// 	static float transientMixIncreaseLimit;
+    	// 	lpf( &transientMixIncreaseLimit, maxSpeedRxcopy, ALPHACALC( LOOPTIME, 1e6f / (float)( TRANSIENT_MIX_INCREASING_HZ ) ) );
+    	// 	if ( transientMixIncreaseLimit > 1.0f ) {
+    	// 		transientMixIncreaseLimit = 1.0f;
+    	// 	}
+    	// #endif // TRANSIENT_MIX_INCREASING_HZ
 
-#ifdef USE_GPS_RESCUE
-    // If gps rescue is active then override the throttle. This prevents things
-    // like throttle boost or throttle limit from negatively affecting the throttle.
-    if (FLIGHT_MODE(GPS_RESCUE_MODE)) {
-        throttle = gpsRescueGetThrottle();
-    }
-#endif
+    		float minMix = 1000.0f;
+    		float maxMix = -1000.0f;
+    		for (int i = 0; i < motorCount; ++i) {
+    			if (motorMix[i] < minMix) {
+    				minMix = motorMix[i];
+    			}
+    			if (motorMix[i] > maxMix) {
+    				maxMix = motorMix[i];
+    			}
+    		}
+    		motorMixRange = maxMix - minMix;
+    		float reduceAmount = 0.0f;
+    		if (motorMixRange > 1.0f) {
+    			const float scale = 1.0f / motorMixRange;
+    			for (int i = 0; i < motorCount; ++i) {
+    				motorMix[i] *= scale;
+    			}
+    			minMix *= scale;
+    			reduceAmount = minMix;
+    		} else {
+    			if (maxMix > 1.0f) {
+    				reduceAmount = maxMix - 1.0f;
+    			} else if (minMix < 0.0f) {
+    				reduceAmount = minMix;
+    			}
+    		}
+    		if (reduceAmount != 0.0f) {
+    	// #ifdef TRANSIENT_MIX_INCREASING_HZ
+    	// 		if ( reduceAmount < -transientMixIncreaseLimit &&
+    	// 			mixmax > idle_offset + 0.1f ) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
+    	// 		{
+    	// 			reduceAmount = -transientMixIncreaseLimit;
+    	// 		}
+    	// #endif // TRANSIENT_MIX_INCREASING_HZ
+    			for (int i = 0; i < motorCount; ++i) {
+    				motorMix[i] -= reduceAmount;
+    			}
+    		}
 
     loggingThrottle = throttle;
-    motorMixRange = motorMixMax - motorMixMin;
-    if (motorMixRange > 1.0f && (hardwareMotorType != MOTOR_BRUSHED)) {
-        for (int i = 0; i < motorCount; i++) {
-            motorMix[i] /= motorMixRange;
-        }
-        // Get the maximum correction by setting offset to center when airmode enabled
-        if (isAirmodeActive()) {
-            throttle = 0.5f;
-        }
-    } else {
-        if (isAirmodeActive() || throttle > 0.5f) {  // Only automatically adjust throttle when airmode enabled. Airmode logic is always active on high throttle
-            throttle = constrainf(throttle, -motorMixMin, 1.0f - motorMixMax);
-        }
-    }
 
     // Apply the mix to motor endpoints
     applyMixToMotors(motorMix);
