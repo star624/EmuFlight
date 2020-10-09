@@ -840,6 +840,8 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     #endif
 
     // Find roll/pitch/yaw desired output
+    float minMix = 1000.0f;
+    float maxMix = -1000.0f;
     float motorMix[MAX_SUPPORTED_MOTORS];
     for (int i = 0; i < motorCount; i++) {
         float mix =
@@ -847,41 +849,17 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
             scaledAxisPidRoll  * currentMixer[i].roll +
             scaledAxisPidPitch * currentMixer[i].pitch +
             scaledAxisPidYaw   * currentMixer[i].yaw;
+
+            if (mix < minMix) {
+              minMix = mix;
+            }
+            if (mix > maxMix) {
+              maxMix = mix;
+            }
+
             motorMix[i] = mix;
     }
 
-      //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      //NOTE FOR QUICKFLASH, try to rewrite this but do it using pidsum change vs stick change!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      //NOTE FOR QUICKFLASH, try the stick change version as well, maybe!!!!!!!!!!!!!!
-      //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    		static float lastScaledAxisPidRoll, lastScaledAxisPidPitch, lastScaledAxisPidYaw;
-    			float absSpeedScaledAxisPidRoll = fabsf(scaledAxisPidRoll - lastScaledAxisPidRoll) * pidFrequency * transientMixMultiplier;
-    			lastScaledAxisPidRoll = scaledAxisPidRoll;
-
-          float absSpeedScaledAxisPidPitch = fabsf(scaledAxisPidPitch - lastScaledAxisPidPitch) * pidFrequency * transientMixMultiplier;
-          lastScaledAxisPidPitch = scaledAxisPidPitch;
-
-          float absSpeedScaledAxisPidYaw = fabsf(scaledAxisPidYaw - lastScaledAxisPidYaw) * pidFrequency * transientMixMultiplier;
-          lastScaledAxisPidYaw = scaledAxisPidYaw;
-
-          float maxSpeedScaledAxisPid = MAX(absSpeedScaledAxisPidRoll, MAX(absSpeedScaledAxisPidPitch, absSpeedScaledAxisPidYaw));
-
-        float transientMixIncreaseLimit = pt1FilterApply(&transientMix, maxSpeedScaledAxisPid);
-    		if (transientMixIncreaseLimit > 1.0f) {
-    			transientMixIncreaseLimit = 1.0f;
-    		}
-
-    		float minMix = 1000.0f;
-    		float maxMix = -1000.0f;
-    		for (int i = 0; i < motorCount; ++i) {
-    			if (motorMix[i] < minMix) {
-    				minMix = motorMix[i];
-    			}
-    			if (motorMix[i] > maxMix) {
-    				maxMix = motorMix[i];
-    			}
-    		}
     		motorMixRange = maxMix - minMix;
     		float reduceAmount = 0.0f;
     		if (motorMixRange > 1.0f) {
@@ -890,6 +868,7 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     				motorMix[i] *= scale;
     			}
     			minMix *= scale;
+          maxMix *= scale;
     			reduceAmount = minMix;
     		} else {
     			if (maxMix > 1.0f) {
@@ -898,6 +877,29 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     				reduceAmount = minMix;
     			}
     		}
+
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //NOTE FOR QUICKFLASH, try to rewrite this but do it using pidsum change vs stick change!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //NOTE FOR QUICKFLASH, try the stick change version as well, maybe!!!!!!!!!!!!!!
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          static float lastScaledAxisPidRoll, lastScaledAxisPidPitch, lastScaledAxisPidYaw;
+            float absSpeedScaledAxisPidRoll = fabsf(scaledAxisPidRoll - lastScaledAxisPidRoll) * pidFrequency * transientMixMultiplier;
+            lastScaledAxisPidRoll = scaledAxisPidRoll;
+
+            float absSpeedScaledAxisPidPitch = fabsf(scaledAxisPidPitch - lastScaledAxisPidPitch) * pidFrequency * transientMixMultiplier;
+            lastScaledAxisPidPitch = scaledAxisPidPitch;
+
+            float absSpeedScaledAxisPidYaw = fabsf(scaledAxisPidYaw - lastScaledAxisPidYaw) * pidFrequency * transientMixMultiplier;
+            lastScaledAxisPidYaw = scaledAxisPidYaw;
+
+            float maxSpeedScaledAxisPid = MAX(absSpeedScaledAxisPidRoll, MAX(absSpeedScaledAxisPidPitch, absSpeedScaledAxisPidYaw));
+
+          float transientMixIncreaseLimit = pt1FilterApply(&transientMix, maxSpeedScaledAxisPid);
+          if (transientMixIncreaseLimit > 1.0f) {
+            transientMixIncreaseLimit = 1.0f;
+          }
+
     		if (reduceAmount > 0.0f || (isAirmodeActive() && reduceAmount != 0.0f)) {
     			if ( reduceAmount < -transientMixIncreaseLimit &&
     				maxMix > motorOutputMin + 0.1f) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
