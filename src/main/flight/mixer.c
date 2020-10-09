@@ -850,25 +850,27 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
             motorMix[i] = mix;
     }
 
-    	// #ifdef TRANSIENT_MIX_INCREASING_HZ
       //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       //NOTE FOR QUICKFLASH, try to rewrite this but do it using pidsum change vs stick change!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    	// 	float maxSpeedRxcopy = 0.0f;
-    	// 	static float lastRxcopy[4];
-    	// 	for (int i = 0; i < 4; ++i) {
-    	// 		const float absSpeedRxcopy = fabsf(rxcopy[i] - lastRxcopy[i]) / LOOPTIME * 1e6f * 0.1f;
-    	// 		lastRxcopy[ i ] = rxcopy[ i ];
-    	// 		if (absSpeedRxcopy > maxSpeedRxcopy) {
-    	// 			maxSpeedRxcopy = absSpeedRxcopy;
-    	// 		}
-    	// 	}
-    	// 	static float transientMixIncreaseLimit;
-    	// 	lpf( &transientMixIncreaseLimit, maxSpeedRxcopy, ALPHACALC( LOOPTIME, 1e6f / (float)( TRANSIENT_MIX_INCREASING_HZ ) ) );
-    	// 	if ( transientMixIncreaseLimit > 1.0f ) {
-    	// 		transientMixIncreaseLimit = 1.0f;
-    	// 	}
-    	// #endif // TRANSIENT_MIX_INCREASING_HZ
+      //NOTE FOR QUICKFLASH, try the stick change version as well, maybe!!!!!!!!!!!!!!
+      //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    		static float lastScaledAxisPidRoll, lastScaledAxisPidPitch, lastScaledAxisPidYaw;
+    			float absSpeedScaledAxisPidRoll = fabsf(scaledAxisPidRoll - lastScaledAxisPidRoll) * pidFrequency * transientMixMultiplier;
+    			lastScaledAxisPidRoll = scaledAxisPidRoll;
+
+          float absSpeedScaledAxisPidPitch = fabsf(scaledAxisPidPitch - lastScaledAxisPidPitch) * pidFrequency * transientMixMultiplier;
+          lastScaledAxisPidPitch = scaledAxisPidPitch;
+
+          float absSpeedScaledAxisPidYaw = fabsf(scaledAxisPidYaw - lastScaledAxisPidYaw) * pidFrequency * transientMixMultiplier;
+          lastScaledAxisPidYaw = scaledAxisPidYaw;
+
+          float maxSpeedScaledAxisPid = MAX(absSpeedScaledAxisPidRoll, MAX(absSpeedScaledAxisPidPitch, absSpeedScaledAxisPidYaw));
+
+        float transientMixIncreaseLimit = pt1FilterApply(&transientMix, maxSpeedScaledAxisPid);
+    		if (transientMixIncreaseLimit > 1.0f) {
+    			transientMixIncreaseLimit = 1.0f;
+    		}
 
     		float minMix = 1000.0f;
     		float maxMix = -1000.0f;
@@ -897,13 +899,11 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     			}
     		}
     		if (reduceAmount > 0.0f || (isAirmodeActive() && reduceAmount != 0.0f)) {
-    	// #ifdef TRANSIENT_MIX_INCREASING_HZ
-    	// 		if ( reduceAmount < -transientMixIncreaseLimit &&
-    	// 			mixmax > idle_offset + 0.1f ) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
-    	// 		{
-    	// 			reduceAmount = -transientMixIncreaseLimit;
-    	// 		}
-    	// #endif // TRANSIENT_MIX_INCREASING_HZ
+    			if ( reduceAmount < -transientMixIncreaseLimit &&
+    				maxMix > motorOutputMin + 0.1f) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
+    			{
+    				reduceAmount = -transientMixIncreaseLimit;
+    			}
     			for (int i = 0; i < motorCount; ++i) {
     				motorMix[i] -= reduceAmount;
     			}

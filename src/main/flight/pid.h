@@ -134,6 +134,8 @@ typedef struct pidProfile_s {
     uint8_t iterm_relax_threshold_yaw;         // This cutoff frequency specifies a low pass filter which predicts average response of the quad to setpoint
     uint8_t motor_output_limit;             // Upper limit of the motor output (percent)
     int8_t auto_profile_cell_count;         // Cell count for this profile to be used with if auto PID profile switching is used
+    uint8_t transient_mix_hz;
+    uint16_t transient_mix_multiplier;
 } pidProfile_t;
 
 #ifndef USE_OSD_SLAVE
@@ -168,6 +170,10 @@ extern uint32_t targetPidLooptime;
 
 extern float throttleBoost;
 extern pt1Filter_t throttleLpf;
+
+extern float pidFrequency;
+extern pt1Filter_t transientMix;
+extern float transientMixMultiplier;
 
 void pidResetITerm(void);
 void pidStabilisationState(pidStabilisationState_e pidControllerState);

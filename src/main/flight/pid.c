@@ -74,7 +74,7 @@ static FAST_RAM_ZERO_INIT bool pidStabilisationEnabled;
 static FAST_RAM_ZERO_INIT bool inCrashRecoveryMode = false;
 
 static FAST_RAM_ZERO_INIT float dT;
-static FAST_RAM_ZERO_INIT float pidFrequency;
+FAST_RAM_ZERO_INIT float pidFrequency;
 
 PG_REGISTER_WITH_RESET_TEMPLATE(pidConfig_t, pidConfig, PG_PID_CONFIG, 2);
 
@@ -179,6 +179,8 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .motor_output_limit = 100,
         .auto_profile_cell_count = AUTO_PROFILE_CELL_COUNT_STAY,
         .horizonTransition = 0,
+        .transient_mix_hz = 2,
+        .transient_mix_multiplier = 10,
     );
 }
 
@@ -285,6 +287,7 @@ void pidInitFilters(const pidProfile_t *pidProfile)
         }
     }
 #endif
+    pt1FilterInit(&transientMix, pt1FilterGain(pidProfile->transient_mix_hz, dT));
 }
 
 
@@ -364,6 +367,8 @@ static FAST_RAM_ZERO_INIT float itermLimit;
 FAST_RAM_ZERO_INIT float throttleBoost;
 pt1Filter_t throttleLpf;
 #endif
+pt1Filter_t transientMix;
+FAST_RAM_ZERO_INIT float transientMixMultiplier;
 static FAST_RAM_ZERO_INIT bool itermRotation;
 static FAST_RAM_ZERO_INIT float temporaryIterm[XYZ_AXIS_COUNT];
 
@@ -418,6 +423,7 @@ void pidInitConfig(const pidProfile_t *pidProfile)
 #if defined(USE_THROTTLE_BOOST)
     throttleBoost = pidProfile->throttle_boost * 0.1f;
 #endif
+    transientMixMultiplier = pidProfile->transient_mix_multiplier / 100.0f;
     itermRotation = pidProfile->iterm_rotation;
 #if defined(USE_ITERM_RELAX)
     itermRelaxCutoff = pidProfile->iterm_relax_cutoff;
