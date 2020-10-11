@@ -179,8 +179,8 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .motor_output_limit = 100,
         .auto_profile_cell_count = AUTO_PROFILE_CELL_COUNT_STAY,
         .horizonTransition = 0,
-        .transient_mix_hz = 2,
-        .transient_mix_multiplier = 10,
+        .transient_mix_hz = 25,
+        .transient_mix_multiplier = 2000,
         .thrust_linear = 60,
     );
 }
