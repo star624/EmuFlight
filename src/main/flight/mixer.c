@@ -876,7 +876,6 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     				motorMix[i] *= scale;
     			}
     			minMix *= scale;
-          maxMix *= scale;
     			reduceAmount = minMix;
     		} else {
     			if (maxMix > 1.0f) {
