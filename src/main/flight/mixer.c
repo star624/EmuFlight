@@ -839,6 +839,14 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
         }
     #endif
 
+    loggingThrottle = throttle;
+
+    // not really the inverse of ALTERNATIVE_THRUST_LINEARIZATION below, but a good enough approximation
+    // removes the feeling of thrust linear
+    const float aa = 1.0f - 0.5f * thrustLinear; // use <1.2 for less compensation
+    const float tr = 1.0f - throttle; // throttle reversed
+    throttle /= (1.0f + tr * tr * aa * thrustLinear); // compensate throttle for the linearization applied further below
+
     // Find roll/pitch/yaw desired output
     float minMix = 1000.0f;
     float maxMix = -1000.0f;
@@ -900,18 +908,18 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
             transientMixIncreaseLimit = 1.0f;
           }
 
-    		if (reduceAmount > 0.0f || (isAirmodeActive() && reduceAmount != 0.0f)) {
-    			if ( reduceAmount < -transientMixIncreaseLimit &&
-    				maxMix > motorOutputMin + 0.1f) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
+    		if ((reduceAmount > 0.0f || (isAirmodeActive() && reduceAmount != 0.0f)) &&
+    			 (reduceAmount < -transientMixIncreaseLimit &&
+    			 maxMix > motorOutputMin + 0.1f)) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
     			{
     				reduceAmount = -transientMixIncreaseLimit;
     			}
-    			for (int i = 0; i < motorCount; ++i) {
+    		for (int i = 0; i < motorCount; ++i) {
     				motorMix[i] -= reduceAmount;
-    			}
+            // apply the thrust linear
+            const float mr = 1.0f - motorMix[i]; // mix reversed
+            motorMix[i] *= 1.0f + mr * mr * thrustLinear;
     		}
-
-    loggingThrottle = throttle;
 
     // Apply the mix to motor endpoints
     applyMixToMotors(motorMix);

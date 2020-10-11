@@ -181,6 +181,7 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .horizonTransition = 0,
         .transient_mix_hz = 2,
         .transient_mix_multiplier = 10,
+        .thrust_linear = 60,
     );
 }
 
@@ -369,6 +370,7 @@ pt1Filter_t throttleLpf;
 #endif
 pt1Filter_t transientMix;
 FAST_RAM_ZERO_INIT float transientMixMultiplier;
+FAST_CODE_NOINLINE float thrustLinear;
 static FAST_RAM_ZERO_INIT bool itermRotation;
 static FAST_RAM_ZERO_INIT float temporaryIterm[XYZ_AXIS_COUNT];
 
@@ -424,6 +426,7 @@ void pidInitConfig(const pidProfile_t *pidProfile)
     throttleBoost = pidProfile->throttle_boost * 0.1f;
 #endif
     transientMixMultiplier = pidProfile->transient_mix_multiplier / 100.0f;
+    thrustLinear = pidProfile->thrust_linear / 100.0f;
     itermRotation = pidProfile->iterm_rotation;
 #if defined(USE_ITERM_RELAX)
     itermRelaxCutoff = pidProfile->iterm_relax_cutoff;

@@ -136,6 +136,7 @@ typedef struct pidProfile_s {
     int8_t auto_profile_cell_count;         // Cell count for this profile to be used with if auto PID profile switching is used
     uint8_t transient_mix_hz;
     uint16_t transient_mix_multiplier;
+    uint8_t thrust_linear;
 } pidProfile_t;
 
 #ifndef USE_OSD_SLAVE
@@ -174,6 +175,7 @@ extern pt1Filter_t throttleLpf;
 extern float pidFrequency;
 extern pt1Filter_t transientMix;
 extern float transientMixMultiplier;
+extern float thrustLinear;
 
 void pidResetITerm(void);
 void pidStabilisationState(pidStabilisationState_e pidControllerState);

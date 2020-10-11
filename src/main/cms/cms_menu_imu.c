@@ -76,6 +76,7 @@ static uint16_t dtermBoost;
 static uint8_t dtermBoostLimit;
 static uint8_t cms_transientMixHz;
 static uint16_t cms_transientMixMultiplier;
+static uint8_t cms_thrustLinear;
 static uint8_t tempPid[3][3];
 static uint8_t tempPidWc[3];
 
@@ -157,6 +158,7 @@ static long cmsx_PidAdvancedRead(void)
     itermWindup = pidProfile->itermWindupPointPercent;
     cms_transientMixHz = pidProfile->transient_mix_hz;
     cms_transientMixMultiplier = pidProfile->transient_mix_multiplier;
+    cms_thrustLinear = pidProfile->thrust_linear;
     return 0;
 }
 
@@ -190,6 +192,7 @@ static long cmsx_PidAdvancedWriteback(const OSD_Entry *self)
     pidProfile->itermWindupPointPercent = itermWindup;
     pidProfile->transient_mix_hz = cms_transientMixHz;
     pidProfile->transient_mix_multiplier = cms_transientMixMultiplier;
+    pidProfile->thrust_linear = cms_thrustLinear;
     pidInitConfig(currentPidProfile);
 
     return 0;
@@ -203,6 +206,8 @@ static OSD_Entry cmsx_menuPidAdvancedEntries[] =
 
     { "TRANS MIX HZ",      OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_transientMixHz,           1,  50,  1}, 0 },
     { "TRANS MIX MULT",    OME_UINT16, NULL, &(OSD_UINT16_t){ &cms_transientMixMultiplier,             0,  2500, 5}, 0 },
+
+    { "THRUST LINEAR",     OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_thrustLinear,           0,  150,  1}, 0 },
 
     { "EMU BOOST",         OME_UINT16, NULL, &(OSD_UINT16_t){ &errorBoost,             0,  2000, 5}, 0 },
     { "BOOST LIMIT",       OME_UINT8, NULL, &(OSD_UINT8_t){ &errorBoostLimit,          0,  250,  1}, 0 },
