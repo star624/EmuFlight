@@ -795,9 +795,9 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     calculateThrottleAndCurrentMotorEndpoints(currentTimeUs);
 
     // Calculate and Limit the PIDsum
-    const float scaledAxisPidRoll =
+    float scaledAxisPidRoll =
         constrainf(pidData[FD_ROLL].Sum, -currentPidProfile->pidSumLimit, currentPidProfile->pidSumLimit) / PID_MIXER_SCALING;
-    const float scaledAxisPidPitch =
+    float scaledAxisPidPitch =
         constrainf(pidData[FD_PITCH].Sum, -currentPidProfile->pidSumLimit, currentPidProfile->pidSumLimit) / PID_MIXER_SCALING;
 
 uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
@@ -847,12 +847,59 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
     const float tr = 1.0f - throttle; // throttle reversed
     throttle /= (1.0f + tr * tr * aa * thrustLinear); // compensate throttle for the linearization applied further below
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //NOTE FOR QUICKFLASH, try to rewrite this but do it using pidsum change vs stick change!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //NOTE FOR QUICKFLASH, try the stick change version as well, maybe!!!!!!!!!!!!!!
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    // calculate rc change and setpoint change for transientMix, axisIgnore, and outsideInfluenceIgnore
+      static float lastRcDeflection[3], absSetpointChange[3], lastSetpoint[3], absSpeedRcDeflection[3];
+      static float absIgnoreAxisSpeed[3];
+      float maxSpeedRc = 0.0f;
+      float ignoreOutsideInfluence, ignoreOutsideInfluenceInv, maxSpeedStick, maxSpeedSetpoint;
+      for (int i = 0; i < 3; ++i) {
+          absSpeedRcDeflection[i] = fabsf(getRcDeflection(i) - lastRcDeflection[i]) * pidFrequency;
+          absSetpointChange[i] = fabsf(getSetpointRate(i) - lastSetpoint[i]) * pidFrequency;
+          lastRcDeflection[i] = getRcDeflection(i);
+          lastSetpoint[i] = getSetpointRate(i);
+
+          if (absSpeedRcDeflection[i] > maxSpeedStick) {
+            maxSpeedStick = absSpeedRcDeflection[i];
+          } else if (absSetpointChange[i] > maxSpeedSetpoint) {
+            maxSpeedSetpoint = absSetpointChange[i];
+          }
+
+// apply a filter to the ignoreAxis in order to make it less jumpy and stick around for a little bit
+          if (ignoreAxisStickMode == 0) {
+            absIgnoreAxisSpeed[i] = pt1FilterApply(&ignoreAxisFilter[i], absSpeedRcDeflection[i]) * ignoreAxisMultiplier;
+          } else {
+            absIgnoreAxisSpeed[i] = pt1FilterApply(&ignoreAxisFilter[i], absSetpointChange[i]) * ignoreAxisMultiplier;
+          }
+      }
+
+// ignore other axis pidsum while moving sticks
+      scaledAxisPidRoll = scaledAxisPidRoll * MAX(1 - absIgnoreAxisSpeed[FD_PITCH] - absIgnoreAxisSpeed[FD_YAW] + absIgnoreAxisSpeed[FD_ROLL], 1.0f);
+      scaledAxisPidPitch = scaledAxisPidPitch * MAX(1 - absIgnoreAxisSpeed[FD_ROLL] - absIgnoreAxisSpeed[FD_YAW] + absIgnoreAxisSpeed[FD_PITCH], 1.0f);
+      scaledAxisPidYaw = scaledAxisPidYaw * MAX(1 - absIgnoreAxisSpeed[FD_ROLL] - absIgnoreAxisSpeed[FD_PITCH] + absIgnoreAxisSpeed[FD_YAW], 1.0f);
+
+// calculate the changed value for ignoreOutsideInfluence, a
+      if (outsideInfluenceStickMode == 0) {
+        ignoreOutsideInfluence = MAX(outsideInfluence - (maxSpeedStick * ignoreOutsideInfluenceMultiplier), 0.0f);
+      } else {
+        ignoreOutsideInfluence = MAX(outsideInfluence - (maxSpeedSetpoint * ignoreOutsideInfluenceMultiplier), 0.0f);
+      }
+      ignoreOutsideInfluence = pt1FilterApply(&ignoreOutsideInfluenceFilter, ignoreOutsideInfluence);
+      ignoreOutsideInfluenceInv = 1.0f - ignoreOutsideInfluence;
+
     // Find roll/pitch/yaw desired output
     float minMix = 1000.0f;
     float maxMix = -1000.0f;
     float motorMix[MAX_SUPPORTED_MOTORS];
     for (int i = 0; i < motorCount; i++) {
-        float mix =
+        float mix;
+
+        mix =
             throttle * currentMixer[i].throttle +
             scaledAxisPidRoll  * currentMixer[i].roll +
             scaledAxisPidPitch * currentMixer[i].pitch +
@@ -870,46 +917,34 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
 
     		motorMixRange = maxMix - minMix;
     		float reduceAmount = 0.0f;
-    		if (motorMixRange > 1.0f) {
-    			const float scale = 1.0f / motorMixRange;
+    		if (motorMixRange > ignoreOutsideInfluenceInv) {
+    			const float scale = ignoreOutsideInfluenceInv / motorMixRange;
     			for (int i = 0; i < motorCount; ++i) {
     				motorMix[i] *= scale;
     			}
     			minMix *= scale;
     			reduceAmount = minMix;
     		} else {
-    			if (maxMix > 1.0f) {
+    			if (maxMix > MIN(1.0f + throttle - ignoreOutsideInfluence, 1.0f)) {
     				reduceAmount = maxMix - 1.0f;
-    			} else if (minMix < 0.0f) {
+    			} else if (minMix < MAX(throttle - ignoreOutsideInfluenceInv, 0.0f)) {
     				reduceAmount = minMix;
     			}
     		}
 
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //NOTE FOR QUICKFLASH, try to rewrite this but do it using pidsum change vs stick change!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //NOTE FOR QUICKFLASH, try the stick change version as well, maybe!!!!!!!!!!!!!!
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          static float lastScaledAxisPidRoll, lastScaledAxisPidPitch, lastScaledAxisPidYaw;
-            float absSpeedScaledAxisPidRoll = fabsf(scaledAxisPidRoll - lastScaledAxisPidRoll) * pidFrequency * transientMixMultiplier;
-            lastScaledAxisPidRoll = scaledAxisPidRoll;
-
-            float absSpeedScaledAxisPidPitch = fabsf(scaledAxisPidPitch - lastScaledAxisPidPitch) * pidFrequency * transientMixMultiplier;
-            lastScaledAxisPidPitch = scaledAxisPidPitch;
-
-            float absSpeedScaledAxisPidYaw = fabsf(scaledAxisPidYaw - lastScaledAxisPidYaw) * pidFrequency * transientMixMultiplier;
-            lastScaledAxisPidYaw = scaledAxisPidYaw;
-
-            float maxSpeedScaledAxisPid = MAX(absSpeedScaledAxisPidRoll, MAX(absSpeedScaledAxisPidPitch, absSpeedScaledAxisPidYaw));
-
-          float transientMixIncreaseLimit = pt1FilterApply(&transientMix, maxSpeedScaledAxisPid);
+          if (mixMultiplierStickMode == 0) {
+            maxSpeedRc = maxSpeedStick * transientMixMultiplier;
+          } else {
+            maxSpeedRc = maxSpeedSetpoint * transientMixMultiplier;
+          }
+          float transientMixIncreaseLimit = pt1FilterApply(&transientMix, maxSpeedRc);
           if (transientMixIncreaseLimit > 1.0f) {
             transientMixIncreaseLimit = 1.0f;
           }
 
     		if ((reduceAmount > 0.0f || (isAirmodeActive() && reduceAmount != 0.0f)) &&
     			 (reduceAmount < -transientMixIncreaseLimit &&
-    			 maxMix > motorOutputMin + 0.1f)) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
+    			 maxMix > 0.1f) && transientMixMultiplier != 0.0f) // Do not apply the limit on idling (e.g. after throttle punches) to prevent from slow wobbles.
     			{
     				reduceAmount = -transientMixIncreaseLimit;
     			}

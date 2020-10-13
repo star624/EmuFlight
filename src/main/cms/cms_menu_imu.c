@@ -76,6 +76,14 @@ static uint16_t dtermBoost;
 static uint8_t dtermBoostLimit;
 static uint8_t cms_transientMixHz;
 static uint16_t cms_transientMixMultiplier;
+static uint8_t cms_mixMultiplierStickMode;
+static uint8_t cms_ignoreOutsideInfluenceHz;
+static uint16_t cms_ignoreOutsideInfluenceMultiplier;
+static uint8_t cms_outsideInfluence;
+static uint8_t cms_outsideInfluenceStickMode;
+static uint8_t cms_ignoreAxisFilterHz;
+static uint16_t cms_ignoreAxisMultiplier;
+static uint8_t cms_ignoreAxisStickMode;
 static uint8_t cms_thrustLinear;
 static uint8_t tempPid[3][3];
 static uint8_t tempPidWc[3];
@@ -158,6 +166,14 @@ static long cmsx_PidAdvancedRead(void)
     itermWindup = pidProfile->itermWindupPointPercent;
     cms_transientMixHz = pidProfile->transient_mix_hz;
     cms_transientMixMultiplier = pidProfile->transient_mix_multiplier;
+    cms_mixMultiplierStickMode = pidProfile->transient_mix_stick_mode;
+    cms_ignoreOutsideInfluenceHz = pidProfile->ignore_outside_influence_hz;
+    cms_ignoreOutsideInfluenceMultiplier = pidProfile->ignore_outside_influence_multiplier;
+    cms_outsideInfluence = pidProfile->ignore_outside_influence;
+    cms_outsideInfluenceStickMode = pidProfile->ignore_outside_influence_stick_mode;
+    cms_ignoreAxisFilterHz = pidProfile->ignore_axis_hz;
+    cms_ignoreAxisMultiplier = pidProfile->ignore_axis_multiplier;
+    cms_ignoreAxisStickMode = pidProfile->ignore_axis_stick_mode;
     cms_thrustLinear = pidProfile->thrust_linear;
     return 0;
 }
@@ -192,6 +208,14 @@ static long cmsx_PidAdvancedWriteback(const OSD_Entry *self)
     pidProfile->itermWindupPointPercent = itermWindup;
     pidProfile->transient_mix_hz = cms_transientMixHz;
     pidProfile->transient_mix_multiplier = cms_transientMixMultiplier;
+    pidProfile->transient_mix_stick_mode = cms_mixMultiplierStickMode;
+    pidProfile->ignore_outside_influence_hz = cms_ignoreOutsideInfluenceHz;
+    pidProfile->ignore_outside_influence_multiplier = cms_ignoreOutsideInfluenceMultiplier;
+    pidProfile->ignore_outside_influence = cms_outsideInfluence;
+    pidProfile->ignore_outside_influence_stick_mode = cms_outsideInfluenceStickMode;
+    pidProfile->ignore_axis_hz = cms_ignoreAxisFilterHz;
+    pidProfile->ignore_axis_multiplier = cms_ignoreAxisMultiplier;
+    pidProfile->ignore_axis_stick_mode = cms_ignoreAxisStickMode;
     pidProfile->thrust_linear = cms_thrustLinear;
     pidInitConfig(currentPidProfile);
 
@@ -205,7 +229,17 @@ static OSD_Entry cmsx_menuPidAdvancedEntries[] =
     { "FEATHERED",         OME_UINT8, NULL, &(OSD_UINT8_t){ &feathered_pids,           0, 100,   1}, 0 },
 
     { "TRANS MIX HZ",      OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_transientMixHz,           1,  50,  1}, 0 },
-    { "TRANS MIX MULT",    OME_UINT16, NULL, &(OSD_UINT16_t){ &cms_transientMixMultiplier,             0,  2500, 5}, 0 },
+    { "TRANS MIX MULT",    OME_UINT16, NULL, &(OSD_UINT16_t){ &cms_transientMixMultiplier, 0,  16000, 1}, 0 },
+    { "TRANS MIX TYPE",    OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_mixMultiplierStickMode,   0,  1,  1}, 0 },
+
+    { "IGNR OUT INF HZ",   OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_ignoreAxisFilterHz,           1,  50,  1}, 0 },
+    { "IGNR OUT INF MULT", OME_UINT16, NULL, &(OSD_UINT16_t){ &cms_ignoreAxisMultiplier,       0,  16000, 1}, 0 },
+    { "IGNR OUT INF",      OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_outsideInfluence,             0,  95,  1}, 0 },
+    { "IGNR OUT INF TYPE", OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_outsideInfluenceStickMode,    0,  1,  1}, 0 },
+
+    { "IGNR AXIS HZ",      OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_ignoreAxisFilterHz,           1,  50,  1}, 0 },
+    { "IGNR AXIS MULT",    OME_UINT16, NULL, &(OSD_UINT16_t){ &cms_ignoreAxisMultiplier,       0,  16000, 1}, 0 },
+    { "IGNR AXIS TYPE",    OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_ignoreAxisStickMode,          0,  1,  1}, 0 },
 
     { "THRUST LINEAR",     OME_UINT8, NULL, &(OSD_UINT8_t){ &cms_thrustLinear,           0,  150,  1}, 0 },
 

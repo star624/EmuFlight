@@ -179,8 +179,16 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .motor_output_limit = 100,
         .auto_profile_cell_count = AUTO_PROFILE_CELL_COUNT_STAY,
         .horizonTransition = 0,
-        .transient_mix_hz = 25,
-        .transient_mix_multiplier = 2000,
+        .transient_mix_hz = 2,
+        .transient_mix_multiplier = 20,
+        .transient_mix_stick_mode = 0,
+        .ignore_outside_influence_hz = 2,
+        .ignore_outside_influence_multiplier = 10,
+        .ignore_outside_influence = 0,
+        .ignore_outside_influence_stick_mode = 1,
+        .ignore_axis_hz = 2,
+        .ignore_axis_multiplier = 0,
+        .ignore_axis_stick_mode = 1,
         .thrust_linear = 60,
     );
 }
@@ -274,6 +282,7 @@ void pidInitFilters(const pidProfile_t *pidProfile)
                 break;
             }
         }
+      pt1FilterInit(&ignoreAxisFilter[axis], pt1FilterGain(pidProfile->ignore_axis_hz, dT));
     }
 
 #if defined(USE_THROTTLE_BOOST)
@@ -289,6 +298,7 @@ void pidInitFilters(const pidProfile_t *pidProfile)
     }
 #endif
     pt1FilterInit(&transientMix, pt1FilterGain(pidProfile->transient_mix_hz, dT));
+    pt1FilterInit(&ignoreOutsideInfluenceFilter, pt1FilterGain(pidProfile->ignore_outside_influence_hz, dT));
 }
 
 
@@ -370,7 +380,18 @@ pt1Filter_t throttleLpf;
 #endif
 pt1Filter_t transientMix;
 FAST_RAM_ZERO_INIT float transientMixMultiplier;
-FAST_CODE_NOINLINE float thrustLinear;
+FAST_RAM_ZERO_INIT uint8_t mixMultiplierStickMode;
+
+pt1Filter_t ignoreOutsideInfluenceFilter;
+FAST_RAM_ZERO_INIT float ignoreOutsideInfluenceMultiplier;
+FAST_RAM_ZERO_INIT float outsideInfluence;
+FAST_RAM_ZERO_INIT uint8_t outsideInfluenceStickMode;
+
+pt1Filter_t ignoreAxisFilter[XYZ_AXIS_COUNT];
+FAST_RAM_ZERO_INIT float ignoreAxisMultiplier;
+FAST_RAM_ZERO_INIT uint8_t ignoreAxisStickMode;
+
+FAST_RAM_ZERO_INIT float thrustLinear;
 static FAST_RAM_ZERO_INIT bool itermRotation;
 static FAST_RAM_ZERO_INIT float temporaryIterm[XYZ_AXIS_COUNT];
 
@@ -425,7 +446,15 @@ void pidInitConfig(const pidProfile_t *pidProfile)
 #if defined(USE_THROTTLE_BOOST)
     throttleBoost = pidProfile->throttle_boost * 0.1f;
 #endif
-    transientMixMultiplier = pidProfile->transient_mix_multiplier / 100.0f;
+
+    transientMixMultiplier = pidProfile->transient_mix_multiplier / 1000.0f;
+    outsideInfluence = pidProfile->ignore_outside_influence / 100.0f;
+    ignoreOutsideInfluenceMultiplier = pidProfile->ignore_outside_influence_multiplier / 1000.0f;
+    ignoreAxisMultiplier = pidProfile->ignore_axis_multiplier / 1000.0f;
+    mixMultiplierStickMode = pidProfile->transient_mix_stick_mode;
+    outsideInfluenceStickMode = pidProfile->ignore_outside_influence_stick_mode;
+    ignoreAxisStickMode = pidProfile->ignore_axis_stick_mode;
+
     thrustLinear = pidProfile->thrust_linear / 100.0f;
     itermRotation = pidProfile->iterm_rotation;
 #if defined(USE_ITERM_RELAX)
