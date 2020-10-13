@@ -180,7 +180,7 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .auto_profile_cell_count = AUTO_PROFILE_CELL_COUNT_STAY,
         .horizonTransition = 0,
         .transient_mix_hz = 2,
-        .transient_mix_multiplier = 20,
+        .transient_mix_multiplier = 200,
         .transient_mix_stick_mode = 0,
         .ignore_outside_influence_hz = 2,
         .ignore_outside_influence_multiplier = 10,
@@ -188,7 +188,7 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .ignore_outside_influence_stick_mode = 1,
         .ignore_axis_hz = 2,
         .ignore_axis_multiplier = 0,
-        .ignore_axis_stick_mode = 1,
+        .ignore_axis_stick_mode = 0, //keep at 0 for Now!!!!
         .thrust_linear = 60,
     );
 }
