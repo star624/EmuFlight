@@ -879,9 +879,9 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
       }
 
 // ignore other axis pidsum while moving sticks
-      scaledAxisPidRoll = scaledAxisPidRoll * MAX(1 - absIgnoreAxisSpeed[FD_PITCH] - absIgnoreAxisSpeed[FD_YAW] + absIgnoreAxisSpeed[FD_ROLL], 1.0f);
-      scaledAxisPidPitch = scaledAxisPidPitch * MAX(1 - absIgnoreAxisSpeed[FD_ROLL] - absIgnoreAxisSpeed[FD_YAW] + absIgnoreAxisSpeed[FD_PITCH], 1.0f);
-      scaledAxisPidYaw = scaledAxisPidYaw * MAX(1 - absIgnoreAxisSpeed[FD_ROLL] - absIgnoreAxisSpeed[FD_PITCH] + absIgnoreAxisSpeed[FD_YAW], 1.0f);
+      scaledAxisPidRoll = scaledAxisPidRoll * MIN(1 - absIgnoreAxisSpeed[FD_PITCH] - absIgnoreAxisSpeed[FD_YAW] + absIgnoreAxisSpeed[FD_ROLL], 1.0f);
+      scaledAxisPidPitch = scaledAxisPidPitch * MIN(1 - absIgnoreAxisSpeed[FD_ROLL] - absIgnoreAxisSpeed[FD_YAW] + absIgnoreAxisSpeed[FD_PITCH], 1.0f);
+      scaledAxisPidYaw = scaledAxisPidYaw * MIN(1 - absIgnoreAxisSpeed[FD_ROLL] - absIgnoreAxisSpeed[FD_PITCH] + absIgnoreAxisSpeed[FD_YAW], 1.0f);
 
 // calculate the changed value for ignoreOutsideInfluence, a
       if (outsideInfluenceStickMode == 0) {
