@@ -132,13 +132,11 @@ float motor_disarmed[MAX_SUPPORTED_MOTORS];
 mixerMode_e currentMixerMode;
 static motorMixer_t currentMixer[MAX_SUPPORTED_MOTORS];
 
-static float airmodeMinSlowAuthority;
-static float airmodeMinFastAuthority;
-static float airmodeMedSlowAuthority;
-static float airmodeMedFastAuthority;
-static float airmodeMaxSlowAuthority;
-static float airmodeMaxFastAuthority;
-static uint8_t predictiveAirMode;
+static float airmodeMinAuthority;
+static float airmodeMedAuthority;
+static float airmodeMaxAuthority;
+static float predictiveAirModeMultiplier;
+static float axisLockMultiplier;
 
 static FAST_RAM_ZERO_INIT int throttleAngleCorrection;
 
@@ -439,13 +437,11 @@ void initEscEndpoints(void)
 // Initialize pidProfile related mixer settings
 void mixerInitProfile(void)
 {
-    airmodeMinSlowAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_min_slow_authority);
-    airmodeMinFastAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_min_fast_authority);
-    airmodeMedSlowAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_med_slow_authority);
-    airmodeMedFastAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_med_fast_authority);
-    airmodeMaxSlowAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_max_slow_authority);
-    airmodeMaxFastAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_max_fast_authority);
-    predictiveAirMode = currentPidProfile->predictiveAirMode;
+    airmodeMinAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_min_authority);
+    airmodeMedAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_med_authority);
+    airmodeMaxAuthority = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->airmode_max_authority);
+    predictiveAirModeMultiplier = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->predictiveAirModeMultiplier);
+    axisLockMultiplier = CONVERT_PARAMETER_TO_PERCENT(currentPidProfile->axisLockMultiplier);
 }
 
 void mixerInit(mixerMode_e mixerMode)
@@ -776,38 +772,6 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS])
         motor[i] = motorOutput;
     }
 
-// float difference;
-// float looptimeAccounter;
-// looptimeAccounter = gyro.targetLooptime * pidConfig()->pid_process_denom;
-//     for (int motorNum = 0; motorNum < motorCount; motorNum++)
-// {
-//   difference = fabsf(motor[motorNum] - previousMotor[motorNum]);
-//   if (difference <= (looptimeAccounter * motorOutputRange * 0.00002f))
-//   {
-//     motor[motorNum] = previousMotor[motorNum];
-//   }
-//   else
-//   {
-//     if (difference > (looptimeAccounter * motorOutputRange * 0.00040f))
-//     {
-//       if (motor[motorNum] > previousMotor[motorNum])
-//       {
-//         motor[motorNum] = previousMotor[motorNum] + (looptimeAccounter * motorOutputRange * 0.00040f); /* increase by max 5% every ms */
-//         previousMotor[motorNum] = motor[motorNum];
-//       }
-//       else
-//       {
-//         motor[motorNum] = previousMotor[motorNum] - (looptimeAccounter * motorOutputRange * 0.00040f); /* decrease by max 5% every ms */
-//         previousMotor[motorNum] = motor[motorNum];
-//       }
-//     }
-//     else
-//     {
-//       previousMotor[motorNum] = motor[motorNum];
-//     }
-//   }
-// }
-
     // Disarmed mode
     if (!ARMING_FLAG(ARMED)) {
         for (int i = 0; i < motorCount; i++) {
@@ -837,21 +801,31 @@ float applyThrottleLimit(float throttle)
 
     return throttle;
 }
-
+FAST_RAM_ZERO_INIT float lastRcDeflection[3], stickMovement[3];
 void applyAirMode(float *motorMix, float motorMixMax)
 {
+    float minThrAirmodePercent, medThrAirmodePercent, maxThrAirmodePercent;
     float normalizationFactor = motorMixRange > 1.0f && hardwareMotorType != MOTOR_BRUSHED ? motorMixRange : 1.0f;
 
-    float minThrAirmodePercent = isAirmodeActive() ? 1.0f : scaleRangef(motorMixRange, 0.0f, 1.0f, airmodeMinSlowAuthority, airmodeMinFastAuthority);
-    float medThrAirmodePercent = isAirmodeActive() ? 1.0f : scaleRangef(motorMixRange, 0.0f, 1.0f, airmodeMedSlowAuthority, airmodeMedFastAuthority);
-    float maxThrAirmodePercent = isAirmodeActive() ? 1.0f : scaleRangef(motorMixRange, 0.0f, 1.0f, airmodeMaxSlowAuthority, airmodeMaxFastAuthority);
+    if (!isAirmodeActive()) {
+        minThrAirmodePercent = airmodeMinAuthority;
+        medThrAirmodePercent = airmodeMedAuthority;
+        maxThrAirmodePercent = airmodeMaxAuthority;
+    } else {
+        minThrAirmodePercent = 1.0f;
+        medThrAirmodePercent = 1.0f;
+        maxThrAirmodePercent = 1.0f;
+    }
     float motorMixDelta = 0.5f * motorMixRange;
 
-    if (predictiveAirMode) {
-        float maxStickDeflection = MAX(getRcDeflectionAbs(ROLL), MAX(getRcDeflectionAbs(PITCH), getRcDeflectionAbs(YAW))); // [0, 1], the max r/p/y stick movement
-        minThrAirmodePercent = minThrAirmodePercent + maxStickDeflection * (1.0f - minThrAirmodePercent);
-        medThrAirmodePercent = medThrAirmodePercent + maxStickDeflection * (1.0f - medThrAirmodePercent);
-        maxThrAirmodePercent = maxThrAirmodePercent + maxStickDeflection * (1.0f - maxThrAirmodePercent);
+    if (predictiveAirModeMultiplier > 0.0f && !isAirmodeActive()) {
+        float maxStickMovement = MAX(stickMovement[ROLL], MAX(stickMovement[PITCH], stickMovement[YAW])); // [0, 1], the max r/p/y stick movement
+        maxStickMovement = maxStickMovement * predictiveAirModeMultiplier;
+        maxStickMovement = MIN(pt1FilterApply(&predictiveAirmodeLpf, maxStickMovement), 1.0f);
+
+        minThrAirmodePercent = minThrAirmodePercent + maxStickMovement * (1.0f - minThrAirmodePercent);
+        medThrAirmodePercent = medThrAirmodePercent + maxStickMovement * (1.0f - medThrAirmodePercent);
+        maxThrAirmodePercent = maxThrAirmodePercent + maxStickMovement * (1.0f - maxThrAirmodePercent);
     }
 
     for (int i = 0; i < motorCount; ++i) {
@@ -876,9 +850,9 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     calculateThrottleAndCurrentMotorEndpoints(currentTimeUs);
 
     // Calculate and Limit the PIDsum
-    const float scaledAxisPidRoll =
+    float scaledAxisPidRoll =
         constrainf(pidData[FD_ROLL].Sum, -currentPidProfile->pidSumLimit, currentPidProfile->pidSumLimit) / PID_MIXER_SCALING;
-    const float scaledAxisPidPitch =
+    float scaledAxisPidPitch =
         constrainf(pidData[FD_PITCH].Sum, -currentPidProfile->pidSumLimit, currentPidProfile->pidSumLimit) / PID_MIXER_SCALING;
 
 uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
@@ -895,6 +869,22 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
   if (!mixerConfig()->yaw_motors_reversed) {
       scaledAxisPidYaw = -scaledAxisPidYaw;
   }
+
+//apply axis lock (make a function later)
+  for (int i = 0; i < 3; ++i) {
+      stickMovement[i] = fabsf(getRcDeflectionAbs(i) - lastRcDeflection[i]) / (targetPidLooptime * 1e-6f);
+      lastRcDeflection[i] = getRcDeflectionAbs(i);
+  }
+  float rollLock = stickMovement[ROLL] * axisLockMultiplier;
+  float pitchLock = stickMovement[PITCH] * axisLockMultiplier;
+  float yawLock = stickMovement[YAW] * axisLockMultiplier;
+  rollLock = pt1FilterApply(&axisLockLpf, rollLock);
+  pitchLock = pt1FilterApply(&axisLockLpf, pitchLock);
+  yawLock = pt1FilterApply(&axisLockLpf, yawLock);
+  scaledAxisPidRoll *= constrainf(1 - pitchLock - yawLock + rollLock, 0.0f, 1.0f);
+  scaledAxisPidPitch *= constrainf(1 - rollLock - yawLock + pitchLock, 0.0f, 1.0f);
+  scaledAxisPidYaw *= constrainf(1 - rollLock - pitchLock + yawLock, 0.0f, 1.0f);
+//finish with the currently gross axis lock
 
     if (currentControlRateProfile->vbat_comp_type != VBAT_COMP_TYPE_OFF) {
         throttle = applyThrottleVbatCompensation(throttle);

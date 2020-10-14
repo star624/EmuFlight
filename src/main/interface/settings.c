@@ -912,13 +912,11 @@ const clivalue_t valueTable[] = {
     { "motor_output_limit",        VAR_UINT8 | PROFILE_VALUE,  .config.minmax = { MOTOR_OUTPUT_LIMIT_PERCENT_MIN, MOTOR_OUTPUT_LIMIT_PERCENT_MAX }, PG_PID_PROFILE, offsetof(pidProfile_t, motor_output_limit) },
     { "auto_profile_cell_count",   VAR_INT8  | PROFILE_VALUE,  .config.minmax = { AUTO_PROFILE_CELL_COUNT_CHANGE, MAX_AUTO_DETECT_CELL_COUNT }, PG_PID_PROFILE, offsetof(pidProfile_t, auto_profile_cell_count) },
 
-    { "airmode_min_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_min_slow_authority) },
-    { "airmode_min_fast_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_min_fast_authority) },
-    { "airmode_med_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_med_slow_authority) },
-    { "airmode_med_fast_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_med_fast_authority) },
-    { "airmode_max_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_max_slow_authority) },
-    { "airmode_max_fast_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_max_fast_authority) },
-    { "predictive_airmode",         VAR_UINT8 | PROFILE_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_PID_PROFILE, offsetof(pidProfile_t, predictiveAirMode) },
+    { "airmode_min_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_min_authority) },
+    { "airmode_med_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_med_authority) },
+    { "airmode_max_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_max_authority) },
+    { "predictive_airmode_mult",    VAR_UINT8 | PROFILE_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_PID_PROFILE, offsetof(pidProfile_t, predictiveAirModeMultiplier) },
+    { "predictive_airmode_hz",      VAR_UINT8 | PROFILE_VALUE, .config.minmax = { 1, 50 }, PG_PID_PROFILE, offsetof(pidProfile_t, predictiveAirModeHz) },
 
 
 // PG_TELEMETRY_CONFIG
