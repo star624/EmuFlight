@@ -915,8 +915,10 @@ const clivalue_t valueTable[] = {
     { "airmode_min_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_min_authority) },
     { "airmode_med_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_med_authority) },
     { "airmode_max_slow_authority", VAR_UINT8 | PROFILE_VALUE, .config.minmax = { AIRMODE_AUTHORITY_MIN, 100 }, PG_PID_PROFILE, offsetof(pidProfile_t, airmode_max_authority) },
-    { "predictive_airmode_mult",    VAR_UINT8 | PROFILE_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_PID_PROFILE, offsetof(pidProfile_t, predictiveAirModeMultiplier) },
+    { "predictive_airmode_mult",    VAR_UINT8 | PROFILE_VALUE, .config.minmax = { 0, 250 }, PG_PID_PROFILE, offsetof(pidProfile_t, predictiveAirModeMultiplier) },
     { "predictive_airmode_hz",      VAR_UINT8 | PROFILE_VALUE, .config.minmax = { 1, 50 }, PG_PID_PROFILE, offsetof(pidProfile_t, predictiveAirModeHz) },
+    { "axis_lock_multiplier",       VAR_UINT8 | PROFILE_VALUE, .config.minmax = { 0, 10 }, PG_PID_PROFILE, offsetof(pidProfile_t, axisLockMultiplier) },
+    { "axis_lock_hz",               VAR_UINT8 | PROFILE_VALUE, .config.minmax = { 1, 50 }, PG_PID_PROFILE, offsetof(pidProfile_t, axisLockHz) },
 
 
 // PG_TELEMETRY_CONFIG

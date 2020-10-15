@@ -872,15 +872,12 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
 
 //apply axis lock (make a function later)
   for (int i = 0; i < 3; ++i) {
-      stickMovement[i] = fabsf(getRcDeflectionAbs(i) - lastRcDeflection[i]) / (targetPidLooptime * 1e-6f);
+      stickMovement[i] = fabsf(getRcDeflectionAbs(i) - lastRcDeflection[i]) * pidFrequency;
       lastRcDeflection[i] = getRcDeflectionAbs(i);
   }
-  float rollLock = stickMovement[ROLL] * axisLockMultiplier;
-  float pitchLock = stickMovement[PITCH] * axisLockMultiplier;
-  float yawLock = stickMovement[YAW] * axisLockMultiplier;
-  rollLock = pt1FilterApply(&axisLockLpf, rollLock);
-  pitchLock = pt1FilterApply(&axisLockLpf, pitchLock);
-  yawLock = pt1FilterApply(&axisLockLpf, yawLock);
+  float rollLock = pt1FilterApply(&axisLockLpf[ROLL], stickMovement[ROLL]) * axisLockMultiplier;
+  float pitchLock = pt1FilterApply(&axisLockLpf[PITCH], stickMovement[PITCH]) * axisLockMultiplier;
+  float yawLock = pt1FilterApply(&axisLockLpf[YAW], stickMovement[YAW]) * axisLockMultiplier;
   scaledAxisPidRoll *= constrainf(1 - pitchLock - yawLock + rollLock, 0.0f, 1.0f);
   scaledAxisPidPitch *= constrainf(1 - rollLock - yawLock + pitchLock, 0.0f, 1.0f);
   scaledAxisPidYaw *= constrainf(1 - rollLock - pitchLock + yawLock, 0.0f, 1.0f);

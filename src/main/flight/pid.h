@@ -177,7 +177,8 @@ extern uint32_t targetPidLooptime;
 extern float throttleBoost;
 extern pt1Filter_t throttleLpf;
 extern pt1Filter_t predictiveAirmodeLpf;
-extern pt1Filter_t axisLockLpf;
+extern pt1Filter_t axisLockLpf[3];
+extern float pidFrequency;
 
 void pidResetITerm(void);
 void pidStabilisationState(pidStabilisationState_e pidControllerState);
