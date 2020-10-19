@@ -818,9 +818,9 @@ void applyAirMode(float *motorMix, float motorMixMax)
         medThrAirmodePercent = constrainf(scaleRangef(motorMixRange, 0.0f, 1.0f, airmodeMedSlowAuthority, airmodeMedFastAuthority), airmodeMedSlowAuthority, airmodeMedFastAuthority);
         maxThrAirmodePercent = constrainf(scaleRangef(motorMixRange, 0.0f, 1.0f, airmodeMaxSlowAuthority, airmodeMaxFastAuthority), airmodeMaxSlowAuthority, airmodeMaxFastAuthority);
     } else {
-        minThrAirmodePercent = MAX(airmodeMinSlowAuthority, 1.0f);
-        medThrAirmodePercent = MAX(airmodeMedSlowAuthority, 1.0f);
-        maxThrAirmodePercent = MAX(airmodeMaxSlowAuthority, 1.0f);
+        minThrAirmodePercent = airmodeMinSlowAuthority;
+        medThrAirmodePercent = airmodeMedSlowAuthority;
+        maxThrAirmodePercent = airmodeMaxSlowAuthority;
     }
     float motorMixDelta = 0.5f * motorMixRange;
 
@@ -829,9 +829,9 @@ void applyAirMode(float *motorMix, float motorMixMax)
         maxStickMovement = maxStickMovement * predictiveAirModeMultiplier;
         maxStickMovement = MIN(pt1FilterApply(&predictiveAirmodeLpf, maxStickMovement), 1.0f);
 
-        minThrAirmodePercent = minThrAirmodePercent + maxStickMovement * (1.0f - minThrAirmodePercent);
-        medThrAirmodePercent = medThrAirmodePercent + maxStickMovement * (1.0f - medThrAirmodePercent);
-        maxThrAirmodePercent = maxThrAirmodePercent + maxStickMovement * (1.0f - maxThrAirmodePercent);
+        minThrAirmodePercent = MIN(0.1f + minThrAirmodePercent + maxStickMovement * (1.0f - minThrAirmodePercent), 1.0f);
+        medThrAirmodePercent = MIN(0.1f + medThrAirmodePercent + maxStickMovement * (1.0f - medThrAirmodePercent), 1.0f);
+        maxThrAirmodePercent = MIN(0.1f + maxThrAirmodePercent + maxStickMovement * (1.0f - maxThrAirmodePercent), 1.0f);
 
         DEBUG_SET(DEBUG_AIRMODE_PERCENT, 0, lrintf(minThrAirmodePercent * 100.0f));
         DEBUG_SET(DEBUG_AIRMODE_PERCENT, 1, lrintf(medThrAirmodePercent * 100.0f));
@@ -896,7 +896,7 @@ uint16_t yawPidSumLimit = currentPidProfile->pidSumLimitYaw;
   DEBUG_SET(DEBUG_AXIS_LOCK, 0, lrintf(scaledAxisPidRoll * 1000.0f));
   DEBUG_SET(DEBUG_AXIS_LOCK, 1, lrintf(scaledAxisPidPitch * 1000.0f));
   DEBUG_SET(DEBUG_AXIS_LOCK, 2, lrintf(scaledAxisPidYaw * 1000.0f));
-  DEBUG_SET(DEBUG_AXIS_LOCK, 3, lrintf(stickMovement[0] * 100.0f));
+  DEBUG_SET(DEBUG_AXIS_LOCK, 3, lrintf(rollLock * 100.0f));
 //finish with the currently gross axis lock
 
     if (currentControlRateProfile->vbat_comp_type != VBAT_COMP_TYPE_OFF) {
