@@ -207,10 +207,10 @@ static OSD_Entry cmsx_menuPidAdvancedEntries[] =
 
     { "FEATHERED",         OME_UINT8, NULL, &(OSD_UINT8_t){ &feathered_pids,           0, 100,   1}, 0 },
 
-    { "AXIS LOCK MULT",    OME_UINT8, NULL, &(OSD_UINT8_t){ &axis_lock_hz,             0,  25,  1}, 0 },
-    { "AXIS LOCK HZ",      OME_UINT8, NULL, &(OSD_UINT8_t){ &axis_lock_multiplier,     1,  50,  1}, 0 },
-    { "PRDCTV ARMD HZ",    OME_UINT8, NULL, &(OSD_UINT8_t){ &predictive_airmode_hz,    0,  25,  1}, 0 },
-    { "PRDCTV ARMD MULT",  OME_UINT8, NULL, &(OSD_UINT8_t){ &predictive_airmode_mult,  1,  50,  1}, 0 },
+    { "AXIS LOCK HZ",      OME_UINT8, NULL, &(OSD_UINT8_t){ &axis_lock_hz,             1,  50,  1}, 0 },
+    { "AXIS LOCK MULT",    OME_UINT8, NULL, &(OSD_UINT8_t){ &axis_lock_multiplier,     0,  25,  1}, 0 },
+    { "PRDCTV ARMD HZ",    OME_UINT8, NULL, &(OSD_UINT8_t){ &predictive_airmode_hz,    1,  50,  1}, 0 },
+    { "PRDCTV ARMD MULT",  OME_UINT8, NULL, &(OSD_UINT8_t){ &predictive_airmode_mult,  0,  25,  1}, 0 },
 
     { "EMU BOOST",         OME_UINT16, NULL, &(OSD_UINT16_t){ &errorBoost,             0,  2000, 5}, 0 },
     { "BOOST LIMIT",       OME_UINT8, NULL, &(OSD_UINT8_t){ &errorBoostLimit,          0,  250,  1}, 0 },
